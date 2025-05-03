@@ -1,0 +1,39 @@
+# 依赖
+node_modules
+.pnp
+.pnp.js
+
+# 构建
+build
+*.tsbuildinfo
+
+# 测试
+coverage
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+*.code-workspace
+
+# Turbo
+.turbo 

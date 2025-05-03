@@ -1,0 +1,36 @@
+{
+  "name": "@mcps/weekly",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "weekly": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "pnpm run watch",
+    "build": "tsc && shx chmod +x dist/index.js",
+    "watch": "tsc --watch",
+    "start": "node ./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "mcp"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": "",
+  "license": "MIT",
+  "description": "Template MCP Server",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.1",
+    "express": "^5.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "shx": "^0.3.4"
+  }
+}
