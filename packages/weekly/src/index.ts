@@ -8,10 +8,9 @@ async function main() {
   const server: McpServer = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.debug('Template MCP Server running on stdio');
 }
 
 main().catch(error => {
-  console.error('Fatal error in main():', error);
+  process.stderr.write(`Fatal error in main(): ${error}\n`);
   process.exit(1);
 });

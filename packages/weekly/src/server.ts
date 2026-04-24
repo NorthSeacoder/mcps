@@ -1,39 +1,33 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 
 export function createServer(): McpServer {
   const server = new McpServer({
-    name: "Template MCP Server",
+    name: "Weekly MCP Server",
     version: "0.1.0",
   });
 
-  server.tool(
-    "get_weather",
-    "Get weather info for a given city.",
-    {
-      city: z.string().describe("city name"),
-    },
-    async ({ city }) => {
-      if (!city) {
-        throw new Error("city name is required.");
-      }
+  // 读取 cursorrules 文件内容
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const cursorRulesPath = path.resolve(__dirname, "./cursorrules");
+  const cursorRulesContent = fs.readFileSync(cursorRulesPath, "utf-8");
 
-      const weather = {
-        city: city,
-        temperature: Math.floor(Math.random() * 30),
-        condition: "Sunny",
-      };
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(weather, null, 2),
-          },
-        ],
-      };
-    },
-  );
+  // 添加预定义的 prompt
+  server.prompt("weekly_editor", async () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: cursorRulesContent,
+        },
+      },
+    ],
+  }));
 
   return server;
 }

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "pnpm run watch",
-    "build": "tsc && shx chmod +x dist/index.js",
+    "build": "tsc && shx cp -r src/cursorrules dist/ && shx chmod +x dist/index.js",
     "watch": "tsc --watch",
     "start": "node ./dist/index.js"
   },
@@ -23,7 +23,7 @@
   },
   "author": "",
   "license": "MIT",
-  "description": "Template MCP Server",
+  "description": "Weekly MCP Server",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.1",
     "express": "^5.1.0",
