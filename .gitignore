@@ -5,6 +5,7 @@ node_modules
 
 # 构建
 build
+dist
 *.tsbuildinfo
 
 # 测试
@@ -16,6 +17,10 @@ coverage
 .env.development.local
 .env.test.local
 .env.production.local
+
+# NAS 私有配置（本地覆盖文件）
+deploy/*.local.*
+deploy/services/*.local.yml
 
 # 日志
 npm-debug.log*
@@ -36,4 +41,12 @@ Thumbs.db
 *.code-workspace
 
 # Turbo
-.turbo 
+.turbo
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/

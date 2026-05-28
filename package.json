@@ -1,7 +1,8 @@
 {
-  "name": "mcp-monorepo",
-  "version": "0.1.0",
+  "name": "mcps",
+  "version": "0.2.0",
   "private": true,
+  "description": "MCP Platform Repo - 统一管理多个 MCP 服务的源码、构建与部署",
   "workspaces": [
     "packages/*"
   ],
@@ -14,10 +15,7 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "new-server": "node scripts/create-server.js",
-    "build:weekly": "pnpm --filter @mcps/weekly build",
-    "dev:weekly": "pnpm --filter @mcps/weekly dev",
-    "start:weekly": "pnpm --filter @mcps/weekly start"
+    "new-server": "node scripts/create-server.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

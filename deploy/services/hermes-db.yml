@@ -1,0 +1,14 @@
+services:
+  hermes-db-mcp:
+    image: ${REGISTRY:-ghcr.io/northseacoder}/hermes-db-mcp:${TAG:-latest}
+    container_name: hermes-db-mcp
+    env_file:
+      - ../nas.local.env
+    restart: unless-stopped
+    pull_policy: always
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
