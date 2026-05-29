@@ -87,6 +87,14 @@ runner 运行用户需要具备：
 - 读写对应 compose 项目目录的权限，例如 `/vol1/1000/Docker/hermes-db-mcp`。
 - 拉取 GHCR 镜像的权限；如果镜像不是公开包，需要提前在 NAS 上执行 `docker login ghcr.io`。
 
+如果 GHCR package 已经存在且没有把本仓库授予写权限，`GITHUB_TOKEN` 可能无法 push。此时在 repo secrets 中添加：
+
+```text
+GHCR_TOKEN=<classic PAT with write:packages>
+```
+
+workflow 会优先使用 `GHCR_TOKEN`，没有配置时才回退到 `GITHUB_TOKEN`。
+
 部署脚本会在 compose 项目目录生成 `.mcps-release.override.yml`，用来把服务镜像固定到当前发布版本，例如：
 
 ```yaml
