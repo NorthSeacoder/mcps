@@ -41,6 +41,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 mcp = FastMCP(
     "hermes-db",
     json_response=True,
+    stateless_http=True,
     lifespan=app_lifespan,
     host="0.0.0.0",
     port=8080,

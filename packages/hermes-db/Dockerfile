@@ -14,7 +14,7 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin/hermes-db-mcp /usr/local/bin/hermes-db-mcp
 COPY src/ src/
 
-ENV TRANSPORT=sse
+ENV TRANSPORT=streamable-http
 EXPOSE 8080
 
 ENTRYPOINT ["hermes-db-mcp"]
