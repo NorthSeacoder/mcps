@@ -198,6 +198,22 @@ async def test_error_response_with_body_gets_content_type_when_missing():
 
 
 @pytest.mark.asyncio
+async def test_success_response_without_content_type_gets_json_content_type():
+    async def app(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    messages = await _collect(
+        BearerAuthMiddleware(app),
+        _http_scope([(b"authorization", b"Bearer test-token")]),
+    )
+
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"] == b"application/json"
+    assert messages[1]["body"] == b""
+
+
+@pytest.mark.asyncio
 async def test_exception_before_response_start_gets_json_500():
     async def app(scope, receive, send):
         raise RuntimeError("boom")

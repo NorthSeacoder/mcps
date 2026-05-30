@@ -209,7 +209,7 @@ class _ResponseState:
 
     @property
     def start_with_diagnostic_headers(self) -> Message:
-        if not self.is_error or self._has_content_type:
+        if self._has_content_type:
             return self.start_message or {
                 "type": "http.response.start",
                 "status": self.status or 500,
@@ -217,7 +217,7 @@ class _ResponseState:
             }
 
         headers = list(self.headers)
-        headers.append((b"content-type", b"text/plain; charset=utf-8"))
+        headers.append((b"content-type", self._fallback_content_type))
         return {
             "type": "http.response.start",
             "status": self.status or 500,
@@ -255,3 +255,9 @@ class _ResponseState:
     @property
     def _has_content_type(self) -> bool:
         return any(name.lower() == b"content-type" for name, _ in self.headers)
+
+    @property
+    def _fallback_content_type(self) -> bytes:
+        if self.is_error:
+            return b"text/plain; charset=utf-8"
+        return b"application/json"
