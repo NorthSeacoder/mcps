@@ -89,6 +89,32 @@ async def test_authorized_request_passes_through_success_response():
 
 
 @pytest.mark.asyncio
+async def test_authorized_mcp_path_with_trailing_slash_is_normalized():
+    seen_paths = []
+
+    async def app(scope, receive, send):
+        seen_paths.append((scope["path"], scope["raw_path"]))
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b'{"ok":true}'})
+
+    scope = _http_scope([(b"authorization", b"Bearer test-token")])
+    scope["path"] = "/mcp/"
+    scope["raw_path"] = b"/mcp/"
+
+    messages = await _collect(BearerAuthMiddleware(app), scope)
+
+    assert seen_paths == [("/mcp", b"/mcp")]
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"] == b"application/json"
+
+
+@pytest.mark.asyncio
 async def test_authorized_stream_probe_returns_event_stream_headers():
     async def app(scope, receive, send):
         raise AssertionError("GET stream probes are handled by middleware")

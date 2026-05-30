@@ -24,6 +24,7 @@ class BearerAuthMiddleware:
         headers = Headers(scope=scope)
         auth_header = headers.get("authorization", "")
         if auth_header == f"Bearer {settings.api_token}":
+            scope = self._normalize_mcp_path(scope)
             if self._is_stream_probe(scope):
                 await self._send_empty_event_stream(send)
                 return
@@ -35,6 +36,15 @@ class BearerAuthMiddleware:
 
         response = JSONResponse({"error": "unauthorized"}, status_code=401)
         await response(scope, receive, send)
+
+    def _normalize_mcp_path(self, scope: Scope) -> Scope:
+        if scope.get("path") != "/mcp/":
+            return scope
+
+        normalized = dict(scope)
+        normalized["path"] = "/mcp"
+        normalized["raw_path"] = b"/mcp"
+        return normalized
 
     def _is_stream_probe(self, scope: Scope) -> bool:
         return scope.get("method") == "GET" and scope.get("path") == "/mcp"
