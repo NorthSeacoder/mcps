@@ -1,5 +1,6 @@
 import json
 
+import anyio
 import pytest
 
 from hermes_db_mcp.config import settings
@@ -26,6 +27,19 @@ async def _collect(app, scope):
         messages.append(message)
 
     await app(scope, _receive, send)
+    return messages
+
+
+async def _collect_first(app, scope, count: int):
+    messages = []
+
+    async def send(message):
+        messages.append(message)
+        if len(messages) >= count:
+            raise anyio.get_cancelled_exc_class()
+
+    with pytest.raises(anyio.get_cancelled_exc_class()):
+        await app(scope, _receive, send)
     return messages
 
 
@@ -82,11 +96,12 @@ async def test_authorized_stream_probe_returns_event_stream_headers():
     scope = _http_scope([(b"authorization", b"Bearer test-token")])
     scope["method"] = "GET"
 
-    messages = await _collect(BearerAuthMiddleware(app), scope)
+    messages = await _collect_first(BearerAuthMiddleware(app), scope, 2)
 
     assert messages[0]["status"] == 200
     assert _headers(messages[0])[b"content-type"].startswith(b"text/event-stream")
     assert messages[1]["body"].startswith(b": keepalive")
+    assert messages[1]["more_body"] is True
 
 
 @pytest.mark.asyncio

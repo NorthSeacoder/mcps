@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+import anyio
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -36,7 +37,6 @@ class BearerAuthMiddleware:
         return scope.get("method") == "GET" and scope.get("path") == "/mcp"
 
     async def _send_empty_event_stream(self, send: Send) -> None:
-        body = b": keepalive\n\n"
         await send(
             {
                 "type": "http.response.start",
@@ -44,11 +44,25 @@ class BearerAuthMiddleware:
                 "headers": [
                     (b"content-type", b"text/event-stream; charset=utf-8"),
                     (b"cache-control", b"no-cache"),
-                    (b"content-length", str(len(body)).encode()),
                 ],
             }
         )
-        await send({"type": "http.response.body", "body": body})
+        await send(
+            {
+                "type": "http.response.body",
+                "body": b": keepalive\n\n",
+                "more_body": True,
+            }
+        )
+        while True:
+            await anyio.sleep(30)
+            await send(
+                {
+                    "type": "http.response.body",
+                    "body": b": keepalive\n\n",
+                    "more_body": True,
+                }
+            )
 
     async def _call_with_diagnostic_errors(
         self,

@@ -1,6 +1,6 @@
 [project]
 name = "hermes-db-mcp"
-version = "0.1.5"
+version = "0.1.6"
 description = "Hermes 领域级 DB MCP Server - 语义化数据访问工具"
 readme = "README.md"
 authors = [
