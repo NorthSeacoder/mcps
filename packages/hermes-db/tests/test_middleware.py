@@ -75,6 +75,21 @@ async def test_authorized_request_passes_through_success_response():
 
 
 @pytest.mark.asyncio
+async def test_authorized_stream_probe_returns_event_stream_headers():
+    async def app(scope, receive, send):
+        raise AssertionError("GET stream probes are handled by middleware")
+
+    scope = _http_scope([(b"authorization", b"Bearer test-token")])
+    scope["method"] = "GET"
+
+    messages = await _collect(BearerAuthMiddleware(app), scope)
+
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"].startswith(b"text/event-stream")
+    assert messages[1]["body"].startswith(b": keepalive")
+
+
+@pytest.mark.asyncio
 async def test_empty_error_response_gets_json_body_and_content_type():
     async def app(scope, receive, send):
         await send({"type": "http.response.start", "status": 404, "headers": []})

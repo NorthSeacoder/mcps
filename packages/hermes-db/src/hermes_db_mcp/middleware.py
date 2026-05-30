@@ -23,11 +23,32 @@ class BearerAuthMiddleware:
         headers = Headers(scope=scope)
         auth_header = headers.get("authorization", "")
         if auth_header == f"Bearer {settings.api_token}":
+            if self._is_stream_probe(scope):
+                await self._send_empty_event_stream(send)
+                return
             await self._call_with_diagnostic_errors(scope, receive, send)
             return
 
         response = JSONResponse({"error": "unauthorized"}, status_code=401)
         await response(scope, receive, send)
+
+    def _is_stream_probe(self, scope: Scope) -> bool:
+        return scope.get("method") == "GET" and scope.get("path") == "/mcp"
+
+    async def _send_empty_event_stream(self, send: Send) -> None:
+        body = b": keepalive\n\n"
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"text/event-stream; charset=utf-8"),
+                    (b"cache-control", b"no-cache"),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
 
     async def _call_with_diagnostic_errors(
         self,
