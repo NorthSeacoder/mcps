@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import logging
 
 import anyio
 from starlette.datastructures import Headers
@@ -6,6 +7,8 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from hermes_db_mcp.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class BearerAuthMiddleware:
@@ -149,10 +152,20 @@ class BearerAuthMiddleware:
             return
 
         state = _ResponseState()
+        request_path = scope.get("path", "")
+        request_method = scope.get("method", "")
 
         async def guarded_send(message: Message) -> None:
             if message["type"] == "http.response.start":
                 state.capture_start(message)
+                # 记录原始 start 消息
+                headers_dict = {name.decode(): value.decode() for name, value in message.get("headers", [])}
+                logger.info(
+                    f"[{request_method} {request_path}] Captured start: "
+                    f"status={message.get('status')}, "
+                    f"has_content_type={'content-type' in headers_dict}, "
+                    f"headers={list(headers_dict.keys())}"
+                )
                 return
 
             if message["type"] == "http.response.body":
@@ -198,6 +211,14 @@ class BearerAuthMiddleware:
                         state.start_with_content_length(body)
                         if state.should_add_content_length(message, body)
                         else state.start_with_diagnostic_headers
+                    )
+                    # 记录即将发送的 start 消息
+                    headers_dict = {name.decode(): value.decode() for name, value in start.get("headers", [])}
+                    logger.info(
+                        f"[{request_method} {request_path}] Sending start: "
+                        f"status={start.get('status')}, "
+                        f"content_type={headers_dict.get('content-type', 'MISSING')}, "
+                        f"content_length={headers_dict.get('content-length', 'MISSING')}"
                     )
                     await send(start)
                     state.sent_start = True
