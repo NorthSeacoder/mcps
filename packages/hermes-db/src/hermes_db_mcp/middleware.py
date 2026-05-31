@@ -175,8 +175,31 @@ class BearerAuthMiddleware:
                 if body:
                     state.has_body = True
 
+                if state.should_buffer_body_for_content_length(message):
+                    state.body_chunks.append(body)
+                    return
+
+                if state.should_flush_buffered_body(message):
+                    state.body_chunks.append(body)
+                    buffered_body = b"".join(state.body_chunks)
+                    await send(state.start_with_content_length(buffered_body))
+                    await send(
+                        {
+                            "type": "http.response.body",
+                            "body": buffered_body,
+                            "more_body": False,
+                        }
+                    )
+                    state.sent_start = True
+                    return
+
                 if not state.sent_start and state.start_message is not None:
-                    await send(state.start_with_diagnostic_headers)
+                    start = (
+                        state.start_with_content_length(body)
+                        if state.should_add_content_length(message, body)
+                        else state.start_with_diagnostic_headers
+                    )
+                    await send(start)
                     state.sent_start = True
 
             await send(message)
@@ -203,7 +226,18 @@ class BearerAuthMiddleware:
                 }
             )
         elif not state.sent_start and state.start_message is not None:
-            await send(state.start_with_diagnostic_headers)
+            if state.body_chunks:
+                body = b"".join(state.body_chunks)
+                await send(state.start_with_content_length(body))
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": body,
+                        "more_body": False,
+                    }
+                )
+            else:
+                await send(state.start_with_diagnostic_headers)
 
 
 class _ResponseState:
@@ -213,6 +247,7 @@ class _ResponseState:
         self.headers: list[tuple[bytes, bytes]] = []
         self.has_body = False
         self.sent_start = False
+        self.body_chunks: list[bytes] = []
 
     def capture_start(self, message: Message) -> None:
         self.start_message = message
@@ -245,6 +280,29 @@ class _ResponseState:
             and not self.sent_start
             and not body
             and message.get("more_body", False)
+        )
+
+    def should_add_content_length(self, message: Message, body: bytes) -> bool:
+        return (
+            not self._has_content_length
+            and not self._is_event_stream
+            and not message.get("more_body", False)
+        )
+
+    def should_buffer_body_for_content_length(self, message: Message) -> bool:
+        return (
+            not self.sent_start
+            and self.start_message is not None
+            and not self._has_content_length
+            and not self._is_event_stream
+            and message.get("more_body", False)
+        )
+
+    def should_flush_buffered_body(self, message: Message) -> bool:
+        return (
+            bool(self.body_chunks)
+            and not self.sent_start
+            and not message.get("more_body", False)
         )
 
     @property
@@ -283,6 +341,17 @@ class _ResponseState:
             "headers": headers,
         }
 
+    def start_with_content_length(self, body: bytes) -> Message:
+        start = self.start_with_diagnostic_headers
+        headers = [
+            (name, value)
+            for name, value in start.get("headers", [])
+            if name.lower() != b"content-length"
+        ]
+        headers.append((b"content-length", str(len(body)).encode()))
+        start["headers"] = headers
+        return start
+
     @property
     def fallback_body(self) -> bytes:
         status = self.status or 500
@@ -295,6 +364,17 @@ class _ResponseState:
     @property
     def _has_content_type(self) -> bool:
         return any(name.lower() == b"content-type" for name, _ in self.headers)
+
+    @property
+    def _has_content_length(self) -> bool:
+        return any(name.lower() == b"content-length" for name, _ in self.headers)
+
+    @property
+    def _is_event_stream(self) -> bool:
+        return any(
+            name.lower() == b"content-type" and b"text/event-stream" in value.lower()
+            for name, value in self.headers
+        )
 
     @property
     def _fallback_content_type(self) -> bytes:

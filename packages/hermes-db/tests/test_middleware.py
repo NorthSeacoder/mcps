@@ -269,7 +269,31 @@ async def test_success_response_without_content_type_gets_json_content_type():
 
     assert messages[0]["status"] == 200
     assert _headers(messages[0])[b"content-type"] == b"application/json"
+    assert _headers(messages[0])[b"content-length"] == b"0"
     assert messages[1]["body"] == b""
+
+
+@pytest.mark.asyncio
+async def test_success_response_without_content_length_gets_buffered_length():
+    async def app(scope, receive, send):
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b'{"ok":', "more_body": True})
+        await send({"type": "http.response.body", "body": b"true}", "more_body": False})
+
+    messages = await _collect(
+        BearerAuthMiddleware(app),
+        _http_scope([(b"authorization", b"Bearer test-token")]),
+    )
+
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-length"] == b"11"
+    assert messages[1]["body"] == b'{"ok":true}'
 
 
 @pytest.mark.asyncio
