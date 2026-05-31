@@ -131,12 +131,28 @@ async def test_authorized_stream_probe_returns_event_stream_headers():
 
 
 @pytest.mark.asyncio
+async def test_authorized_head_probe_returns_empty_json_headers():
+    async def app(scope, receive, send):
+        raise AssertionError("HEAD probes are handled by middleware")
+
+    scope = _http_scope([(b"authorization", b"Bearer test-token")])
+    scope["method"] = "HEAD"
+
+    messages = await _collect(BearerAuthMiddleware(app), scope)
+
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"] == b"application/json"
+    assert _headers(messages[0])[b"content-length"] == b"0"
+    assert messages[1]["body"] == b""
+
+
+@pytest.mark.asyncio
 async def test_authorized_unsupported_mcp_method_returns_json_error():
     async def app(scope, receive, send):
         raise AssertionError("unsupported /mcp methods are handled by middleware")
 
     scope = _http_scope([(b"authorization", b"Bearer test-token")])
-    scope["method"] = "HEAD"
+    scope["method"] = "OPTIONS"
 
     messages = await _collect(BearerAuthMiddleware(app), scope)
 

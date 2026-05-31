@@ -25,6 +25,9 @@ class BearerAuthMiddleware:
         auth_header = headers.get("authorization", "")
         if auth_header == f"Bearer {settings.api_token}":
             scope = self._normalize_mcp_path(scope)
+            if self._is_head_probe(scope):
+                await self._send_empty_json_probe_response(send)
+                return
             if self._is_stream_probe(scope):
                 await self._send_empty_event_stream(send)
                 return
@@ -49,8 +52,24 @@ class BearerAuthMiddleware:
     def _is_stream_probe(self, scope: Scope) -> bool:
         return scope.get("method") == "GET" and scope.get("path") == "/mcp"
 
+    def _is_head_probe(self, scope: Scope) -> bool:
+        return scope.get("method") == "HEAD" and scope.get("path") == "/mcp"
+
     def _is_unsupported_mcp_method(self, scope: Scope) -> bool:
         return scope.get("path") == "/mcp" and scope.get("method") not in ("GET", "POST")
+
+    async def _send_empty_json_probe_response(self, send: Send) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", b"0"),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": b""})
 
     async def _send_json_method_not_allowed(self, send: Send) -> None:
         body = b'{"error":"method_not_allowed"}'
