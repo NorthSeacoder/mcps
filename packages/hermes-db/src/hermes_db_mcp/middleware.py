@@ -23,13 +23,17 @@ class BearerAuthMiddleware:
 
         headers = Headers(scope=scope)
         auth_header = headers.get("authorization", "")
+        if self._is_head_probe(scope):
+            await self._send_empty_json_probe_response(send, status=200 if auth_header == f"Bearer {settings.api_token}" else 401)
+            return
+
         if auth_header == f"Bearer {settings.api_token}":
             scope = self._normalize_mcp_path(scope)
-            if self._is_head_probe(scope):
-                await self._send_empty_json_probe_response(send)
-                return
             if self._is_stream_probe(scope):
-                await self._send_empty_event_stream(send)
+                if self._accepts_event_stream(headers):
+                    await self._send_empty_event_stream(send)
+                else:
+                    await self._send_json_probe_response(send)
                 return
             if self._is_unsupported_mcp_method(scope):
                 await self._send_json_method_not_allowed(send)
@@ -56,13 +60,19 @@ class BearerAuthMiddleware:
         return scope.get("method") == "HEAD" and scope.get("path") == "/mcp"
 
     def _is_unsupported_mcp_method(self, scope: Scope) -> bool:
-        return scope.get("path") == "/mcp" and scope.get("method") not in ("GET", "POST")
+        return scope.get("path") == "/mcp" and scope.get("method") not in (
+            "GET",
+            "POST",
+        )
 
-    async def _send_empty_json_probe_response(self, send: Send) -> None:
+    def _accepts_event_stream(self, headers: Headers) -> bool:
+        return "text/event-stream" in headers.get("accept", "")
+
+    async def _send_empty_json_probe_response(self, send: Send, status: int = 200) -> None:
         await send(
             {
                 "type": "http.response.start",
-                "status": 200,
+                "status": status,
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", b"0"),
@@ -70,6 +80,20 @@ class BearerAuthMiddleware:
             }
         )
         await send({"type": "http.response.body", "body": b""})
+
+    async def _send_json_probe_response(self, send: Send) -> None:
+        body = b'{"ok":true}'
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
 
     async def _send_json_method_not_allowed(self, send: Send) -> None:
         body = b'{"error":"method_not_allowed"}'
@@ -205,10 +229,7 @@ class _ResponseState:
 
     @property
     def needs_empty_error_body(self) -> bool:
-        return (
-            self.is_error
-            and not self.has_body
-        )
+        return self.is_error and not self.has_body
 
     def should_replace_empty_error(self, message: Message, body: bytes) -> bool:
         return (

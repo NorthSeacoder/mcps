@@ -119,7 +119,12 @@ async def test_authorized_stream_probe_returns_event_stream_headers():
     async def app(scope, receive, send):
         raise AssertionError("GET stream probes are handled by middleware")
 
-    scope = _http_scope([(b"authorization", b"Bearer test-token")])
+    scope = _http_scope(
+        [
+            (b"authorization", b"Bearer test-token"),
+            (b"accept", b"application/json, text/event-stream"),
+        ]
+    )
     scope["method"] = "GET"
 
     messages = await _collect_first(BearerAuthMiddleware(app), scope, 2)
@@ -128,6 +133,26 @@ async def test_authorized_stream_probe_returns_event_stream_headers():
     assert _headers(messages[0])[b"content-type"].startswith(b"text/event-stream")
     assert messages[1]["body"].startswith(b": keepalive")
     assert messages[1]["more_body"] is True
+
+
+@pytest.mark.asyncio
+async def test_authorized_get_probe_without_event_stream_accept_returns_json():
+    async def app(scope, receive, send):
+        raise AssertionError("GET probes are handled by middleware")
+
+    scope = _http_scope(
+        [
+            (b"authorization", b"Bearer test-token"),
+            (b"accept", b"*/*"),
+        ]
+    )
+    scope["method"] = "GET"
+
+    messages = await _collect(BearerAuthMiddleware(app), scope)
+
+    assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"] == b"application/json"
+    assert json.loads(messages[1]["body"]) == {"ok": True}
 
 
 @pytest.mark.asyncio
@@ -141,6 +166,22 @@ async def test_authorized_head_probe_returns_empty_json_headers():
     messages = await _collect(BearerAuthMiddleware(app), scope)
 
     assert messages[0]["status"] == 200
+    assert _headers(messages[0])[b"content-type"] == b"application/json"
+    assert _headers(messages[0])[b"content-length"] == b"0"
+    assert messages[1]["body"] == b""
+
+
+@pytest.mark.asyncio
+async def test_unauthorized_head_probe_returns_empty_401_headers():
+    async def app(scope, receive, send):
+        raise AssertionError("HEAD probes are handled by middleware")
+
+    scope = _http_scope()
+    scope["method"] = "HEAD"
+
+    messages = await _collect(BearerAuthMiddleware(app), scope)
+
+    assert messages[0]["status"] == 401
     assert _headers(messages[0])[b"content-type"] == b"application/json"
     assert _headers(messages[0])[b"content-length"] == b"0"
     assert messages[1]["body"] == b""
@@ -190,7 +231,9 @@ async def test_streamed_empty_error_response_gets_single_json_response_start():
         _http_scope([(b"authorization", b"Bearer test-token")]),
     )
 
-    starts = [message for message in messages if message["type"] == "http.response.start"]
+    starts = [
+        message for message in messages if message["type"] == "http.response.start"
+    ]
     assert len(starts) == 1
     assert starts[0]["status"] == 404
     assert _headers(starts[0])[b"content-type"] == b"application/json"
