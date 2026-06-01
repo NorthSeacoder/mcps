@@ -31,10 +31,10 @@ from hermes_db_mcp.contracts import (
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnly=False,
-        destructive=False,
-        idempotent=False,
-        openWorld=True,
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
     )
 )
 async def create_topic(
@@ -85,7 +85,7 @@ async def create_topic(
     }
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnly=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 async def find_similar_topics(
     text: str,
     ctx: Context,
@@ -116,10 +116,10 @@ async def find_similar_topics(
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnly=False,
-        destructive=False,
-        idempotent=True,
-        openWorld=False,
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
     )
 )
 async def update_topic_status(id: str, new_status: str, ctx: Context) -> dict:
@@ -151,10 +151,10 @@ async def update_topic_status(id: str, new_status: str, ctx: Context) -> dict:
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnly=False,
-        destructive=False,
-        idempotent=True,
-        openWorld=False,
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
     )
 )
 async def publish_topic(id: str, published_url: str, ctx: Context) -> dict:
@@ -187,7 +187,7 @@ async def publish_topic(id: str, published_url: str, ctx: Context) -> dict:
     }
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnly=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 async def list_topics(
     ctx: Context,
     account: str | None = None,
@@ -237,7 +237,7 @@ async def list_topics(
     return result
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnly=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True))
 async def get_topic(id: str, ctx: Context) -> dict:
     """获取单条选题详情，优先读 Redis 缓存。"""
     app: AppContext = ctx.request_context.lifespan_context
@@ -262,10 +262,10 @@ async def get_topic(id: str, ctx: Context) -> dict:
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnly=False,
-        destructive=False,
-        idempotent=True,
-        openWorld=False,
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
     )
 )
 async def update_topic(
@@ -392,10 +392,10 @@ async def update_topic(
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnly=False,
-        destructive=False,
-        idempotent=True,
-        openWorld=False,
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
     )
 )
 async def batch_update_topics(

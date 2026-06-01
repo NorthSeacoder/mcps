@@ -2,7 +2,6 @@
 测试 contracts 模块的常量、校验 helper 和结构化结果模型
 """
 
-import pytest
 from uuid import uuid4
 
 from hermes_db_mcp.contracts import (

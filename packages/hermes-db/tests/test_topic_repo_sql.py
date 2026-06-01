@@ -6,7 +6,6 @@ import pytest
 from uuid import uuid4
 
 from hermes_db_mcp.repositories import topic_repo
-from hermes_db_mcp.contracts import EDITABLE_TOPIC_FIELDS, BULK_TOPIC_FIELDS
 
 
 class FakeConnection:

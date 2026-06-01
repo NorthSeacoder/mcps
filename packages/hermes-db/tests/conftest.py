@@ -4,7 +4,6 @@
 
 import pytest
 import asyncpg
-from uuid import uuid4
 import os
 
 
