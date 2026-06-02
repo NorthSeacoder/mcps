@@ -1,13 +1,13 @@
 # Implementation Plan: hermes-db topic bucket & revisit_of
 
 **Workspace**: `hermes-db-topic-bucket-revisit` | **Date**: 2026-06-01 | **Spec**: [spec.md](spec.md)
-**Target version**: 0.2.4 | **Current version**: 0.1.13
+**Target version**: 0.2.5 | **Current version**: 0.1.13
 
 ---
 
 ## Summary
 
-在 hermes-db 0.2.4 中完成三件事：① 用 alembic 给 `hermes.topics` 加两个 NULL 字段（`revisit_of` + `mother_theme`）并禁止 `revisit_of` 自引用；② 在 `find_similar_topics` 返回值里加 `bucket`/`age_days` 注解，阈值从 `config.py` 读取；③ 新增 `list_revisit_chain` 工具和 `health.capabilities`。部署链路采用显式 release migration：镜像包含 alembic 资产，发布时先运行一次 `alembic upgrade head`，成功后再启动新版 server；普通容器重启不默认执行 migration。
+在 hermes-db 0.2.5 中完成三件事：① 用 alembic 给 `hermes.topics` 加两个 NULL 字段（`revisit_of` + `mother_theme`）并禁止 `revisit_of` 自引用；② 在 `find_similar_topics` 返回值里加 `bucket`/`age_days` 注解，阈值从 `config.py` 读取；③ 新增 `list_revisit_chain` 工具和 `health.capabilities`。部署链路采用显式 release migration：镜像包含 alembic 资产，发布时先运行一次 `alembic upgrade head`，成功后再启动新版 server；普通容器重启不默认执行 migration。
 
 ---
 
@@ -15,7 +15,7 @@
 
 ```text
 Deploy flow:
-  git tag hermes-db-v0.2.4
+  git tag hermes-db-v0.2.5
   → CI build image
   → NAS pull image
   → release step: docker compose run --rm --entrypoint alembic hermes-db-mcp upgrade head
@@ -44,10 +44,10 @@ Request flow (list_revisit_chain):
 
 | Producer | Artifact | Consumer | Consumption Proof |
 |---|---|---|---|
-| hermes-db 0.2.4 | `find_similar_topics` 返回的 `bucket` 字段 | wechat-topic-radar-online | 启动时调用 `health().capabilities.topic_bucket == true`；实际调用能读到 `bucket` 字段 |
-| hermes-db 0.2.4 | `create_topic` / `update_topic` 的 `revisit_of` 参数 | wechat-topic-radar-online | `health().capabilities.topic_revisit_of == true`；写入后 `get_topic` 能读到该字段 |
-| hermes-db 0.2.4 | `list_revisit_chain` 工具 | wechat-topic-radar-online | `health().capabilities.list_revisit_chain == true`；工具存在于 MCP 工具列表 |
-| hermes-db 0.2.4 | `health().version >= "0.2.4"` | wechat-topic-radar-online 启动 gate | 启动日志中能看到 version 检查通过，否则降级到本地常量 |
+| hermes-db 0.2.5 | `find_similar_topics` 返回的 `bucket` 字段 | wechat-topic-radar-online | 启动时调用 `health().capabilities.topic_bucket == true`；实际调用能读到 `bucket` 字段 |
+| hermes-db 0.2.5 | `create_topic` / `update_topic` 的 `revisit_of` 参数 | wechat-topic-radar-online | `health().capabilities.topic_revisit_of == true`；写入后 `get_topic` 能读到该字段 |
+| hermes-db 0.2.5 | `list_revisit_chain` 工具 | wechat-topic-radar-online | `health().capabilities.list_revisit_chain == true`；工具存在于 MCP 工具列表 |
+| hermes-db 0.2.5 | `health().version >= "0.2.5"` | wechat-topic-radar-online 启动 gate | 启动日志中能看到 version 检查通过，否则降级到本地常量 |
 
 **孤儿 artifact 处理**：无孤儿；`mother_theme` 字段是 `revisit_of` 链路的补充上下文，由同一 consumer 读取，不单独作为 artifact。
 
@@ -108,7 +108,7 @@ Request flow (list_revisit_chain):
 bucket_hard_threshold: float = 0.95
 bucket_soft_threshold: float = 0.80
 bucket_revisit_days: int = 90
-version: str = "0.2.4"  # 硬编码，作为 health 探活依据
+version: str = "0.2.5"  # 硬编码，作为 health 探活依据
 ```
 
 **注意**：阈值与 `find_similar` 的 `threshold` 参数相互独立——`threshold` 是调用方的最低相似度过滤，`bucket_*` 是返回行的分档标注。二者不冲突；bucket 只注解已返回的行。
@@ -200,7 +200,7 @@ async def list_revisit_chain(topic_id: str, ctx, max_depth: int = 20):
 
 **改动**：在返回 dict 末尾追加：
 ```text
-result["version"] = settings.version   # "0.2.4"
+result["version"] = settings.version   # "0.2.5"
 result["schema_revision"] = SELECT version_num FROM alembic_version LIMIT 1
 result["capabilities"] = inspect_topic_schema(pool)
 ```
@@ -211,7 +211,7 @@ result["capabilities"] = inspect_topic_schema(pool)
 ### Module 7: `pyproject.toml` + `Dockerfile`
 
 **pyproject.toml**：
-- `version = "0.2.4"`
+- `version = "0.2.5"`
 - `dependencies` 新增 `"alembic>=1.13"` 和 `"psycopg2-binary>=2.9"`
 
 **Dockerfile**：
@@ -282,7 +282,7 @@ packages/hermes-db/
 1. **Migration**：`alembic upgrade head` 后，`SELECT column_name FROM information_schema.columns WHERE table_schema='hermes' AND table_name='topics'` 能看到 `revisit_of` 和 `mother_theme`；索引通过 `\d hermes.topics` 确认；`UPDATE hermes.topics SET revisit_of = id` 被 `chk_topics_revisit_of_not_self` 拒绝。
 2. **bucket 分档**：在 PG 写入覆盖四档的测试数据，调用 `find_similar_topics(threshold=0.5)`，验证每条的 `bucket` 与预期一致（对应 spec US1-1 ~ US1-4）。
 3. **revisit_of 链路**：写入 U0→U1→U2 链，调用 `list_revisit_chain(U2)` 返回三条倒序结果；写入环路 A↔B，验证 `truncated=true`。
-4. **health capabilities**：调用 `health()` 验证 `version="0.2.4"` 且三个 capabilities 均为 true。
+4. **health capabilities**：调用 `health()` 验证 `version="0.2.5"` 且三个 capabilities 均为 true。
 5. **向后兼容**：旧客户端只读 `similarity` 字段，新响应新增字段不影响其解析（NFR-003）。
 
 ---

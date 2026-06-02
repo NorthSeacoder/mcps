@@ -16,8 +16,11 @@ target_metadata = None
 
 def _migration_url() -> str:
     raw_url = os.getenv(
-        "PG_DSN",
-        "postgresql://hermes:password@localhost:5432/hermes",
+        "MIGRATION_PG_DSN",
+        os.getenv(
+            "PG_DSN",
+            "postgresql://hermes:password@localhost:5432/hermes",
+        ),
     )
     url = make_url(raw_url)
     if url.drivername.startswith("postgresql"):

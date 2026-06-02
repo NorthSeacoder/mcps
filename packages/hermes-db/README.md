@@ -58,7 +58,7 @@ docker compose up -d hermes-db-mcp
 
 ```json
 {
-  "version": "0.2.4",
+  "version": "0.2.5",
   "schema_revision": "0001_topic_revisit",
   "capabilities": {
     "topic_bucket": true,
