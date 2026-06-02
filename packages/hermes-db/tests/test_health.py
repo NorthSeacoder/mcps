@@ -27,7 +27,7 @@ async def test_health_returns_version_and_capabilities():
 
     result = await health(ctx)
 
-    assert result["version"] == "0.2.5"
+    assert result["version"] == "0.2.6"
     assert result["capabilities"] == {
         "topic_bucket": True,
         "topic_revisit_of": True,

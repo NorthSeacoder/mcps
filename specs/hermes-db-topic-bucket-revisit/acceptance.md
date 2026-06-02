@@ -14,8 +14,8 @@
 | Ruff static check | PASS | `uv run ruff check .` -> All checks passed |
 | Alembic SQL generation | PASS | `uv run alembic upgrade head --sql` generated `0001_topic_revisit` SQL |
 | Whitespace check | PASS | `git diff --check` produced no output |
-| Release manifest resolution | PASS | `node scripts/resolve-mcp-release.mjs hermes-db-v0.2.5` resolved migration entrypoint `alembic`, command `upgrade head`, and MCP health smoke capabilities |
-| Release image immutability gate | PASS | `v0.2.0` and `v0.2.1` were rejected because their GHCR image tags already exist; `docker buildx imagetools inspect` also found `v0.2.2` occupied; `v0.2.3` built successfully but NAS pull was denied before deploy; `v0.2.4` pulled but migration failed because `PG_DSN` used non-owner `hermes_user`, so release was bumped to `v0.2.5` with `MIGRATION_PG_DSN` support |
+| Release manifest resolution | PASS | `node scripts/resolve-mcp-release.mjs hermes-db-v0.2.6` resolved migration entrypoint `alembic`, command `upgrade head`, and MCP health smoke capabilities |
+| Release image immutability gate | PASS | `v0.2.0` and `v0.2.1` were rejected because their GHCR image tags already exist; `docker buildx imagetools inspect` also found `v0.2.2` occupied; `v0.2.3` built successfully but NAS pull was denied before deploy; `v0.2.4` pulled but migration failed because `PG_DSN` used non-owner `hermes_user`; `v0.2.5` deployed and migrated but smoke raced startup, so release was bumped to `v0.2.6` with health smoke retry |
 | Deploy script syntax | PASS | `bash -n scripts/nas-deploy-mcp.sh` and workflow deploy shell body parsed successfully |
 | NAS baseline health | PASS | Current NAS `hermes-db-mcp` is still `v0.1.13`; `pg=ok`, `redis=ok`, no `version/schema_revision/capabilities` yet |
 | Local Docker build | BLOCKED | Build reached Docker Hub metadata resolution, then `python:3.12-slim` timed out; Dockerfile still covered by release workflow build |
@@ -45,7 +45,7 @@
 - T019 is not complete. Target environment still needs release migration and runtime verification:
   - `docker compose run --rm --entrypoint alembic hermes-db-mcp upgrade head`
   - `docker compose up -d hermes-db-mcp`
-  - verify `health().version == "0.2.5"`
+  - verify `health().version == "0.2.6"`
   - verify `health().schema_revision == "0001_topic_revisit"`
   - verify `health().capabilities.topic_bucket/topic_revisit_of/list_revisit_chain == true`
   - verify DB has `revisit_of`, `mother_theme`, `fk_topics_revisit_of`, `chk_topics_revisit_of_not_self`

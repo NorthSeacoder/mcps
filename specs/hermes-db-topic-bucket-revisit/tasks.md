@@ -24,7 +24,7 @@
 - [x] T002 [FR-001, US2-4] 在 migration 中为 `hermes.topics` 新增 `revisit_of`、`mother_theme`、`idx_topics_revisit_of`、`chk_topics_revisit_of_not_self`。
   - 验证：`revisit_of`/`mother_theme` 列存在，索引存在，`UPDATE hermes.topics SET revisit_of = id` 被拒绝。
 
-- [x] T003 [FR-011] 更新 `pyproject.toml`：版本升到 `0.2.5`，新增 `alembic>=1.13` 与 `psycopg2-binary>=2.9`。
+- [x] T003 [FR-011] 更新 `pyproject.toml`：版本升到 `0.2.6`，新增 `alembic>=1.13` 与 `psycopg2-binary>=2.9`。
   - 验证：`uv sync` 后 `uv run alembic --version` 可用。
 
 - [x] T004 [FR-011, NFR-001] 更新 `Dockerfile`：runtime 镜像复制 `alembic.ini` 与 `migrations/`，保持 `ENTRYPOINT ["hermes-db-mcp"]`。
@@ -34,7 +34,7 @@
 
 ## Phase 2: 契约与数据字段传播
 
-- [x] T005 [FR-004, US1] 在 `config.py` 增加 `bucket_hard_threshold=0.95`、`bucket_soft_threshold=0.80`、`bucket_revisit_days=90`、`version="0.2.5"`。
+- [x] T005 [FR-004, US1] 在 `config.py` 增加 `bucket_hard_threshold=0.95`、`bucket_soft_threshold=0.80`、`bucket_revisit_days=90`、`version="0.2.6"`。
   - 验证：环境变量可覆盖阈值，默认值与 spec 一致。
 
 - [x] T006 [FR-006, FR-010, US2-3, US2-4, US2-5] 更新 `contracts.py`：`EDITABLE_TOPIC_FIELDS` 和 `CLEARABLE_TOPIC_FIELDS` 增加 `revisit_of`、`mother_theme`；错误码增加 `invalid_revisit_of_self`、`revisit_target_not_found`；新增 revisit chain TypedDict。
@@ -79,7 +79,7 @@
 
 ## Phase 5: health capabilities 与发布验证
 
-- [x] T016 [FR-009, US3-1, US3-2] 更新 `tools/health.py`，返回 `version="0.2.5"`、`schema_revision` 与 schema-aware `capabilities.topic_bucket/topic_revisit_of/list_revisit_chain`。
+- [x] T016 [FR-009, US3-1, US3-2] 更新 `tools/health.py`，返回 `version="0.2.6"`、`schema_revision` 与 schema-aware `capabilities.topic_bucket/topic_revisit_of/list_revisit_chain`。
   - 验证：旧版本缺失 capabilities 时，下游可等同全部 false；代码已升级但 DB 未迁移时 schema-dependent capabilities 返回 false。
 
 - [x] T017 [Producer-Consumer Matrix, artifact-handoff] 在 hermes-db README 或部署文档补充本 feature 的 release migration 命令与下游探活契约。
@@ -94,8 +94,8 @@
 - [x] T019b [MCP Hardening] 为 HTTP 401 补 `WWW-Authenticate`，补齐 inspiration 工具 annotations，收敛常用错误到 `ToolError` helper。
   - 验证：middleware、inspiration、contract 单测覆盖新增行为。
 
-- [ ] T019 [Release Evidence, FR-011] 在目标环境执行 release migration 并启动 0.2.5 服务。
-  - 验证：migration 成功；`health().version >= "0.2.5"`；三个 capabilities 为 true；schema 与 CHECK 约束存在。
+- [ ] T019 [Release Evidence, FR-011] 在目标环境执行 release migration 并启动 0.2.6 服务。
+  - 验证：migration 成功；`health().version >= "0.2.6"`；三个 capabilities 为 true；schema 与 CHECK 约束存在。
 
 ---
 

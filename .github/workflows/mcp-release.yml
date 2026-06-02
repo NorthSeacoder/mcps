@@ -205,8 +205,10 @@ jobs:
             echo "Running MCP health smoke: ${smoke_url}"
             python3 - "$smoke_url" "$token" "$smoke_capabilities" <<'PY'
           import json
+          import time
           import sys
           import urllib.request
+          from urllib.error import URLError
 
           url, token, capabilities = sys.argv[1:4]
           required = [item for item in capabilities.split(",") if item]
@@ -232,8 +234,21 @@ jobs:
               headers=headers,
               method="POST",
           )
-          with urllib.request.urlopen(request, timeout=15) as response:
-              raw = response.read().decode("utf-8")
+
+          last_error = None
+          for attempt in range(1, 11):
+              try:
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      raw = response.read().decode("utf-8")
+                  break
+              except (ConnectionError, TimeoutError, URLError, OSError) as exc:
+                  last_error = exc
+                  if attempt == 10:
+                      raise
+                  time.sleep(min(attempt, 5))
+          else:
+              raise SystemExit(f"MCP health smoke failed: {last_error}")
+
           data = json.loads(raw)
           if "error" in data:
               raise SystemExit(f"MCP health returned error: {data['error']}")
