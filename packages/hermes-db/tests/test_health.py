@@ -28,11 +28,13 @@ async def test_health_returns_version_and_capabilities():
 
     result = await health(ctx)
 
-    assert result["version"] == "0.2.7"
+    assert result["version"] == "0.2.9"
     assert result["capabilities"] == {
         "topic_bucket": True,
         "topic_revisit_of": True,
         "list_revisit_chain": True,
+        "workflow_runs": True,
+        "workflow_artifacts": True,
     }
     assert result["schema_revision"] == "0001_topic_revisit"
 
@@ -82,6 +84,8 @@ async def test_health_disables_capabilities_when_pg_is_unavailable(monkeypatch):
         "topic_bucket": False,
         "topic_revisit_of": False,
         "list_revisit_chain": False,
+        "workflow_runs": False,
+        "workflow_artifacts": False,
     }
 
 
@@ -97,4 +101,15 @@ def schema_inspector(monkeypatch):
     monkeypatch.setattr(
         "hermes_db_mcp.tools.health.inspect_topic_schema",
         inspect_topic_schema,
+    )
+
+    async def inspect_workflow_schema(pool):
+        return {
+            "workflow_runs": True,
+            "workflow_artifacts": True,
+        }
+
+    monkeypatch.setattr(
+        "hermes_db_mcp.tools.health.inspect_workflow_schema",
+        inspect_workflow_schema,
     )

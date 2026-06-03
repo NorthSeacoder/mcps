@@ -100,7 +100,8 @@ NAS 私有配置（PG_DSN、REDIS_URL、密钥等）通过 `deploy/nas.local.env
 3. 使用平台层 compose 拉取并启动。
 4. 如版本包含 migration，执行 `docker compose run --rm --entrypoint alembic hermes-db-mcp upgrade head`。
 5. 启动服务后验证服务可用性（调用 `health` 工具）。
-6. 对 `hermes-db-v0.2.0` 及之后版本，确认 `health().schema_revision == "0001_topic_revisit"`，且 `health().capabilities.topic_bucket`、`topic_revisit_of`、`list_revisit_chain` 均为 `true`。
-7. 确认无误后归档原仓。
+6. 对 `hermes-db-v0.2.0` 及之后版本，确认 `health().capabilities.topic_bucket`、`topic_revisit_of`、`list_revisit_chain` 均为 `true`。
+7. 对 `hermes-db-v0.2.9` 及之后版本，确认 `health().schema_revision == "0002_wechat_workflow_artifacts"`，且 `health().capabilities.workflow_runs`、`workflow_artifacts` 均为 `true`。
+8. 确认无误后归档原仓。
 
 在切换完成前，原仓的运行态保持可用，两者可并存。

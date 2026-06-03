@@ -25,7 +25,9 @@
           "capabilities": [
             "topic_bucket",
             "topic_revisit_of",
-            "list_revisit_chain"
+            "list_revisit_chain",
+            "workflow_runs",
+            "workflow_artifacts"
           ]
         }
       }

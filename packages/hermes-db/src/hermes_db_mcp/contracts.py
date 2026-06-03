@@ -59,6 +59,9 @@ VALID_RESONANCES = frozenset(["高", "中", "低"])
 
 # 批量更新上限
 MAX_BATCH_SIZE = 100
+MAX_WORKFLOW_INLINE_CONTENT_BYTES = 256 * 1024
+DEFAULT_WORKFLOW_ARTIFACT_LIMIT = 50
+MAX_WORKFLOW_ARTIFACT_LIMIT = 200
 
 
 # ============================================================================
@@ -142,6 +145,12 @@ ERROR_CODES = {
     # 系统错误
     "embedding_unavailable": "embedding 服务不可用",
     "database_error": "数据库错误",
+    # workflow persistence
+    "content_too_large": "正文超过 inline 存储上限",
+    "content_missing": "content_text 和 content_ref 至少需要一个",
+    "artifact_id_conflict": "artifact_id 已存在但内容 hash 不一致",
+    "schema_drift": "数据库 schema 未满足工具要求",
+    "invalid_filter": "查询过滤条件不合法",
 }
 
 
@@ -270,6 +279,129 @@ def validate_pagination(limit: int, offset: int) -> ToolError | None:
             "details": {"actual": offset},
         }
     return None
+
+
+def validate_required_text(value: str | None, field: str) -> ToolError | None:
+    if value is None or not str(value).strip():
+        return error("missing_required_field", field=field)
+    return None
+
+
+def validate_optional_uuid(value: str | None, field: str) -> tuple[UUID | None, ToolError | None]:
+    if value is None:
+        return None, None
+    try:
+        return UUID(value), None
+    except (ValueError, AttributeError):
+        return None, error("invalid_uuid", field=field, details={"value": value})
+
+
+def validate_workflow_run_payload(
+    *,
+    run_id: str | None,
+    phase: str | None,
+    status: str | None,
+) -> ToolError | None:
+    for field, value in (
+        ("run_id", run_id),
+        ("phase", phase),
+        ("status", status),
+    ):
+        err = validate_required_text(value, field)
+        if err:
+            return err
+    return None
+
+
+def validate_finish_workflow_run_payload(
+    *,
+    run_id: str | None,
+    phase: str | None,
+    status: str | None,
+) -> ToolError | None:
+    return validate_workflow_run_payload(run_id=run_id, phase=phase, status=status)
+
+
+def validate_workflow_artifact_payload(
+    *,
+    run_id: str | None,
+    stage: str | None,
+    type: str | None,
+    name: str | None,
+    content_hash: str | None,
+    content_size_bytes: int | None,
+    content_text: str | None,
+    content_ref: str | None,
+    topic_id: str | None = None,
+    parent_artifact_id: str | None = None,
+) -> ToolError | None:
+    for field, value in (
+        ("run_id", run_id),
+        ("stage", stage),
+        ("type", type),
+        ("name", name),
+        ("content_hash", content_hash),
+    ):
+        err = validate_required_text(value, field)
+        if err:
+            return err
+
+    if content_size_bytes is None or content_size_bytes < 0:
+        return error(
+            "invalid_field",
+            field="content_size_bytes",
+            details={"actual": content_size_bytes},
+        )
+    if content_text is None and content_ref is None:
+        return error("content_missing")
+    if content_text is not None:
+        size = len(content_text.encode("utf-8"))
+        if size > MAX_WORKFLOW_INLINE_CONTENT_BYTES:
+            return error(
+                "content_too_large",
+                field="content_text",
+                details={
+                    "max_bytes": MAX_WORKFLOW_INLINE_CONTENT_BYTES,
+                    "actual_bytes": size,
+                },
+            )
+        if "\x00" in content_text:
+            return error("invalid_field", field="content_text")
+
+    _, topic_err = validate_optional_uuid(topic_id, "topic_id")
+    if topic_err:
+        return topic_err
+    if parent_artifact_id is not None and not parent_artifact_id.strip():
+        return error("invalid_field", field="parent_artifact_id")
+    return None
+
+
+def validate_workflow_artifact_query(
+    *,
+    run_id: str | None = None,
+    topic_id: str | None = None,
+    account: str | None = None,
+    type: str | None = None,
+    stage: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = DEFAULT_WORKFLOW_ARTIFACT_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [run_id, topic_id, account, type, stage, date_from, date_to]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    if limit < 1 or limit > MAX_WORKFLOW_ARTIFACT_LIMIT:
+        return error(
+            "invalid_field",
+            field="limit",
+            details={"min": 1, "max": MAX_WORKFLOW_ARTIFACT_LIMIT, "actual": limit},
+        )
+    if offset < 0:
+        return error("invalid_field", field="offset", details={"actual": offset})
+    _, topic_err = validate_optional_uuid(topic_id, "topic_id")
+    return topic_err
 
 
 def error(
