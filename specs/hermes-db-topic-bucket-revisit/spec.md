@@ -2,7 +2,7 @@
 
 **Workspace**: `hermes-db-topic-bucket-revisit`
 **Created**: 2026-06-01
-**Status**: Draft
+**Status**: Released
 **Input**: 用户描述: "把公众号选题 skill 里的『三档去重 + revisit_of 同母题换角度』口径从 skill 文档层固化到 hermes-db；当前 find_similar_topics 只返回 similarity，没有 bucket 分档，也没有 revisit_of 字段记录同母题换角度的迭代链路。"
 
 > 本 feature 是上游能力建设：完成后供同仓 wechat-agent feature `wechat-topic-radar-online` 消费。下游 feature 启动前会通过 health/能力探活判断本 feature 是否已部署生效。

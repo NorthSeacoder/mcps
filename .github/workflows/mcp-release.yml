@@ -64,11 +64,94 @@ jobs:
       - name: Run service tests
         run: ${{ needs.resolve.outputs.test_command }}
 
+  preflight_github:
+    name: Preflight Git tag and GHCR image
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify Git tag is present
+        run: |
+          set -euo pipefail
+          git show-ref --tags --verify "refs/tags/${GITHUB_REF_NAME}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Refuse existing GHCR version tag
+        env:
+          IMAGE_REF: ${{ needs.resolve.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+          if docker buildx imagetools inspect "${IMAGE_REF}" >/dev/null 2>&1; then
+            echo "Image already exists: ${IMAGE_REF}" >&2
+            exit 1
+          fi
+
+      - name: Release summary
+        env:
+          SERVICE_NAME: ${{ needs.resolve.outputs.service }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+          IMAGE_REF: ${{ needs.resolve.outputs.image_ref }}
+          MIGRATION_COMMAND: ${{ needs.resolve.outputs.migration_command }}
+          SMOKE_URL: ${{ needs.resolve.outputs.smoke_url }}
+          SMOKE_CAPABILITIES: ${{ needs.resolve.outputs.smoke_capabilities }}
+        run: |
+          {
+            echo "## MCP release preflight"
+            echo
+            echo "- Git tag: ${GITHUB_REF_NAME}"
+            echo "- Service: ${SERVICE_NAME}"
+            echo "- Version: ${VERSION}"
+            echo "- Image: ${IMAGE_REF}"
+            echo "- Migration: ${MIGRATION_COMMAND:-none}"
+            echo "- Smoke URL: ${SMOKE_URL:-none}"
+            echo "- Required capabilities: ${SMOKE_CAPABILITIES:-none}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  preflight_nas:
+    name: Preflight NAS deploy target
+    needs: resolve
+    runs-on:
+      - self-hosted
+      - nas
+      - deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check compose, env, and migration role
+        env:
+          SERVICE_NAME: ${{ needs.resolve.outputs.service }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+          IMAGE_REF: ${{ needs.resolve.outputs.image_ref }}
+          COMPOSE_PROJECT_DIR: ${{ needs.resolve.outputs.compose_project_dir }}
+          COMPOSE_FILE: ${{ needs.resolve.outputs.compose_file }}
+          COMPOSE_SERVICE: ${{ needs.resolve.outputs.compose_service }}
+          CONTAINER_NAME: ${{ needs.resolve.outputs.container_name }}
+          MIGRATION_COMMAND: ${{ needs.resolve.outputs.migration_command }}
+          SMOKE_TOKEN_ENV: ${{ needs.resolve.outputs.smoke_token_env }}
+        run: bash scripts/check-mcp-release-preflight.sh
+
   build:
     name: Build and publish ${{ needs.resolve.outputs.image_ref }}
     needs:
       - resolve
       - test
+      - preflight_github
+      - preflight_nas
+    if: ${{ always() && needs.resolve.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') && needs.preflight_github.result == 'success' && needs.preflight_nas.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

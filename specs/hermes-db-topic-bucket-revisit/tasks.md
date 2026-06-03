@@ -3,7 +3,7 @@
 **Feature**: `hermes-db-topic-bucket-revisit`  
 **Spec**: [spec.md](spec.md)  
 **Plan**: [plan.md](plan.md)  
-**Status**: Ready for implement
+**Status**: Released
 
 ---
 
@@ -142,6 +142,6 @@
 
 ## Stage Readiness
 
-- 下一步建议：进入 `execute-plan`，按 Phase 1 → Phase 5 顺序实现。
-- 任务边界：已具备文件范围、依赖顺序和验证方式。
+- 下一步建议：已发布，后续由下游 feature 通过 `health` capabilities 消费。
+- 任务边界：实现、测试、release migration 与 NAS smoke 均已完成。
 - 阻塞项：无。

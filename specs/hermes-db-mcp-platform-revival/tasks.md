@@ -3,6 +3,7 @@
 **Workspace**: `mcps` | **Date**: 2026-05-27  
 **Input**: `specs/hermes-db-mcp-platform-revival/spec.md` + `plan.md`  
 **Prerequisites**: spec.md (必须), plan.md (必须)
+**Status**: Implemented & Verified
 
 ---
 
@@ -19,17 +20,17 @@
 
 **目标**: 把 `mcps` 从旧模板仓恢复为可维护的平台仓，并更新根级说明。
 
-- [ ] T001 [Platform] 重写根 README 为平台仓说明
+- [x] T001 [Platform] 重写根 README 为平台仓说明
   - scope: `README.md`
   - maps_to: FR-001 / FR-002 / FR-008
   - verify: README 能清楚说明 `mcps` 是平台仓、支持多服务、后续接入方式和当前范围
 
-- [ ] T002 [Platform] 规范根工作区与平台级脚本
+- [x] T002 [Platform] 规范根工作区与平台级脚本
   - scope: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `scripts/create-server.js`
   - maps_to: FR-001 / FR-002 / FR-005
   - verify: 根脚本仍可构建、开发、测试，且新服务创建逻辑不再假设旧模板仓是唯一业务形态
 
-- [ ] T003 [Platform] 固化平台级目录约定
+- [x] T003 [Platform] 固化平台级目录约定
   - scope: `packages/`, `deploy/`, `docs/`, `specs/`
   - maps_to: FR-001 / FR-002 / FR-008
   - verify: 仓库目录能明确区分服务目录、部署约定、文档和规格产物
@@ -40,17 +41,17 @@
 
 **目标**: 将 `hermes-db` 纳入 `mcps` 的统一管理边界，先覆盖源码、构建和部署描述。
 
-- [ ] T004 [Hermes] 引入 `hermes-db` 服务目录
+- [x] T004 [Hermes] 引入 `hermes-db` 服务目录
   - scope: `packages/hermes-db/`
   - maps_to: FR-003 / FR-005
   - verify: `hermes-db` 的源码、Dockerfile、compose/部署说明和服务入口都能在平台仓下定位
 
-- [ ] T005 [Hermes] 对齐服务命名与构建入口
+- [x] T005 [Hermes] 对齐服务命名与构建入口
   - scope: `packages/hermes-db/` 内部构建配置与入口脚本
   - maps_to: FR-003 / FR-005
   - verify: 服务构建命令和镜像命名有统一约定，便于后续新增 MCP 复用
 
-- [ ] T006 [Hermes] 更新 `hermes-db` 的平台接入文档
+- [x] T006 [Hermes] 更新 `hermes-db` 的平台接入文档
   - scope: `docs/hermes-db-deployment.md`, `packages/hermes-db/README.md`
   - maps_to: FR-003 / FR-007 / FR-008
   - verify: 文档能说明源码位置、构建方式、部署方式以及后续切换边界
@@ -61,17 +62,17 @@
 
 **目标**: 建立 NAS 私有配置隔离和统一部署骨架。
 
-- [ ] T007 [Deploy] 建立公共部署目录与模板文件
+- [x] T007 [Deploy] 建立公共部署目录与模板文件
   - scope: `deploy/`, `deploy/nas.example.env`, `deploy/services/`
   - maps_to: FR-005 / FR-007 / NFR-004
   - verify: 公共仓内有统一的部署说明和示例配置，但不包含私有值
 
-- [ ] T008 [Deploy] 增加 NAS 私有覆盖规则
+- [x] T008 [Deploy] 增加 NAS 私有覆盖规则
   - scope: `.gitignore`, `deploy/*.local.*`, `.env.local` 约定
   - maps_to: FR-006 / NFR-002 / NFR-004
   - verify: NAS 专用配置不会被提交，仓库内只保留模板和说明
 
-- [ ] T009 [Deploy] 统一镜像构建与拉取约定
+- [x] T009 [Deploy] 统一镜像构建与拉取约定
   - scope: `deploy/README.md`, `docs/platform-overview.md`
   - maps_to: FR-005 / NFR-003 / NFR-004
   - verify: 所有 MCP 的公共流程都能通过“构建 -> tag -> push -> NAS pull -> run”描述清楚
@@ -82,17 +83,17 @@
 
 **目标**: 确认迁移后的仓库可持续维护，并保留现有 NAS 运行态的回滚边界。
 
-- [ ] T010 [Migration] 写明 `hermes-db` 首期只迁源码和流程的切换说明
+- [x] T010 [Migration] 写明 `hermes-db` 首期只迁源码和流程的切换说明
   - scope: `docs/hermes-db-deployment.md`, `docs/platform-overview.md`
   - maps_to: FR-004 / NFR-001
   - verify: 文档明确哪些内容已经迁入 `mcps`，哪些仍保留在原 NAS 运行态
 
-- [ ] T011 [Migration] 补充平台仓使用与新增 MCP 接入说明
+- [x] T011 [Migration] 补充平台仓使用与新增 MCP 接入说明
   - scope: `docs/platform-overview.md`
   - maps_to: FR-001 / FR-002 / FR-005 / FR-008
   - verify: 新增 MCP 的目录、模板、部署与私有配置规则能被快速复用
 
-- [ ] T012 [Validation] 做一次仓库级完整性检查
+- [x] T012 [Validation] 做一次仓库级完整性检查
   - scope: 全仓
   - maps_to: NFR-001 / NFR-002 / NFR-003 / NFR-004
   - verify: 检查工作区脚本、目录约定、`.gitignore`、部署模板和文档之间没有冲突
@@ -137,5 +138,6 @@
 
 ## Stage Readiness
 
-- 推荐下一步：`implement`
+- 状态：已实现并验证；后续 NAS 运行态切换也已通过 `hermes-db-v0.2.8` 完成。
+- 后续：平台仓可继续承接新 MCP 或新 hermes-db feature。
 - 阻塞项（如有）：无
