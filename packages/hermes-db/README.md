@@ -67,7 +67,7 @@ docker compose up -d hermes-db-mcp
 
 ```json
 {
-  "version": "0.2.11",
+  "version": "0.2.12",
   "schema_revision": "0004_wechat_analytics_ingestion",
   "capabilities": {
     "topic_bucket": true,

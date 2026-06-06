@@ -63,7 +63,7 @@
 
 ## Remaining Evidence Gates
 
-- T038: PASS - 准备发布 `hermes-db-v0.2.11`；`deploy/mcp-services.json` health smoke 已加入 `wechat_analytics_ingestion`；README 已记录 `0004_wechat_analytics_ingestion`、新 capability 和 analytics tools。
+- T038: PASS - 准备发布 `hermes-db-v0.2.12`；`hermes-db-v0.2.11` 已构建但 NAS deploy 因 self-hosted runner 下载 `docker/login-action@v3` 超时失败；`deploy/mcp-services.json` health smoke 已加入 `wechat_analytics_ingestion`；README 已记录 `0004_wechat_analytics_ingestion`、新 capability 和 analytics tools。
 - T039: 部署后执行 NAS/真实 MCP smoke，确认 `schema_revision=0004_wechat_analytics_ingestion` 和 `capabilities.wechat_analytics_ingestion=true`。
 - T040: agents `wechat-analytics-ingestion` 通过真实 MCP endpoint 完成 sample import/query。
 - T041: NAS/agents 证据补齐后更新本文件为 final acceptance。
