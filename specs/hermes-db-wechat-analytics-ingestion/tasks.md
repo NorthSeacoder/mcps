@@ -245,10 +245,10 @@
   - maps_to: artifact-handoff / external-side-effects
   - verify: acceptance draft or release note captures new revision, tables, tools, health capability.
 
-- [ ] T039 [NAS Smoke] 部署后执行 NAS/真实 MCP smoke
+- [x] T039 [NAS Smoke] 部署后执行 NAS/真实 MCP smoke
   - scope: NAS hermes-db deployment, MCP `/mcp` endpoint
   - maps_to: Verification Requirements / external-side-effects
-  - verify: health reports `schema_revision=0004_wechat_analytics_ingestion` and `capabilities.wechat_analytics_ingestion=true`; bulk import repeat and query smoke passes.
+  - verify: MCP Release run `27063819452` deployed `ghcr.io/north-sea/hermes-db-mcp:v0.2.12`; Alembic upgraded `0003_wechat_publication_ledger -> 0004_wechat_analytics_ingestion`; health smoke reported `version=0.2.12`, `schema_revision=0004_wechat_analytics_ingestion`, and `capabilities.wechat_analytics_ingestion=true`.
 
 - [ ] T040 [Agents Handoff] 与 agents `wechat-analytics-ingestion` live smoke 对齐
   - scope: `/Users/yqg/personal/AI/agents/specs/wechat-analytics-ingestion/`, agents MCP adapter

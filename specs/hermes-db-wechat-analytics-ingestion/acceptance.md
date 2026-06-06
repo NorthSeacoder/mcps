@@ -52,18 +52,18 @@
 | Dimension | Verdict | Notes |
 |---|---|---|
 | Component capability | PASS | Local schema, contracts, repository, tools, health, docs, focused tests, regression tests, and ruff all pass. |
-| Workflow closure | PARTIAL | NAS runtime smoke and agents live handoff remain open. |
+| Workflow closure | PARTIAL | NAS runtime smoke passed; agents live handoff remains open. |
 | User-visible outcome | N/A | Feature has no UI/user-visible output trait; CLI-facing structured MCP output is covered by tool tests. |
 
 **Overall**: CONDITIONAL PASS
 
-**三维不一致说明**: 本地组件能力足以进入部署验证，但 spec 命中 `external-side-effects` 和 `artifact-handoff`。在 NAS migration/MCP endpoint smoke 与 agents live smoke 之前，不能宣称完整 PASS 或进入最终 closeout。剩余项对应 `tasks.md` T038-T041。
+**三维不一致说明**: 本地组件能力与 NAS runtime smoke 已通过，但 spec 命中 `artifact-handoff`。在 agents live smoke 之前，不能宣称完整 PASS 或进入最终 closeout。剩余项对应 `tasks.md` T040-T041。
 
 ---
 
 ## Remaining Evidence Gates
 
 - T038: PASS - 准备发布 `hermes-db-v0.2.12`；`hermes-db-v0.2.11` 已构建但 NAS deploy 因 self-hosted runner 下载 `docker/login-action@v3` 超时失败；`deploy/mcp-services.json` health smoke 已加入 `wechat_analytics_ingestion`；README 已记录 `0004_wechat_analytics_ingestion`、新 capability 和 analytics tools。
-- T039: 部署后执行 NAS/真实 MCP smoke，确认 `schema_revision=0004_wechat_analytics_ingestion` 和 `capabilities.wechat_analytics_ingestion=true`。
+- T039: PASS - MCP Release run `27063819452` 全绿；deploy job `79881150380` 成功拉取 `ghcr.io/north-sea/hermes-db-mcp:v0.2.12`，执行 Alembic `0003_wechat_publication_ledger -> 0004_wechat_analytics_ingestion`，并通过 `/mcp` health smoke：`version=0.2.12`、`schema_revision=0004_wechat_analytics_ingestion`、`capabilities.wechat_analytics_ingestion=true`。
 - T040: agents `wechat-analytics-ingestion` 通过真实 MCP endpoint 完成 sample import/query。
 - T041: NAS/agents 证据补齐后更新本文件为 final acceptance。
