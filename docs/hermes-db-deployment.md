@@ -65,9 +65,9 @@ docker compose up -d hermes-db-mcp
 
 迁移不绑定普通服务 `ENTRYPOINT`。这样迁移失败时旧运行态不会被无意替换，也避免未来多副本同时尝试迁移。
 
-### `0005_wechat_retrospective_topic_optimizer` 发布检查
+### `0005_wechat_retro_opt` 发布检查
 
-包含 `0005_wechat_retrospective_topic_optimizer` 的版本会新增 `topic_performance`、`wechat_retrospective_reports`、`topic_optimization_suggestions`、`learning_candidates` 四张表，用于公众号复盘选题优化的持久化、审核和学习候选项交接。
+包含 `0005_wechat_retro_opt` 的版本会新增 `topic_performance`、`wechat_retrospective_reports`、`topic_optimization_suggestions`、`learning_candidates` 四张表，用于公众号复盘选题优化的持久化、审核和学习候选项交接。
 
 发布前后建议执行：
 
@@ -81,7 +81,7 @@ docker compose run --rm --entrypoint alembic hermes-db-mcp upgrade head
 
 ```json
 {
-  "schema_revision": "0005_wechat_retrospective_topic_optimizer",
+  "schema_revision": "0005_wechat_retro_opt",
   "capabilities": {
     "wechat_retrospective_topic_optimizer": true
   }
@@ -131,7 +131,7 @@ NAS 私有配置（PG_DSN、REDIS_URL、密钥等）通过 `deploy/nas.local.env
 7. 对 `hermes-db-v0.2.9` 及之后版本，确认 `health().schema_revision == "0002_wechat_workflow_artifacts"`，且 `health().capabilities.workflow_runs`、`workflow_artifacts` 均为 `true`。
 8. 对包含 `0003_wechat_publication_ledger` 的版本，确认 `health().schema_revision == "0003_wechat_publication_ledger"`，且 `health().capabilities.wechat_publication_ledger == true`；`tools/list` 应包含 `upsert_wechat_article`、`list_wechat_articles`、`get_wechat_article`、`update_wechat_article_external_refs`。
 9. 对包含 `0004_wechat_analytics_ingestion` 的版本，确认 `health().schema_revision == "0004_wechat_analytics_ingestion"`，且 `health().capabilities.wechat_analytics_ingestion == true`；`tools/list` 应包含 `bulk_upsert_wechat_article_metric_snapshots`、`list_wechat_article_metric_snapshots`。
-10. 对包含 `0005_wechat_retrospective_topic_optimizer` 的版本，确认 `health().schema_revision == "0005_wechat_retrospective_topic_optimizer"`，且 `health().capabilities.wechat_retrospective_topic_optimizer == true`；`tools/list` 应包含 `upsert_topic_performance`、`list_topic_performance`、`create_wechat_retrospective_report`、`list_wechat_retrospective_reports`、`create_topic_optimization_suggestions`、`list_approved_topic_ranking_hints`、`create_learning_candidates`、`review_learning_candidate`。agents 侧 live smoke 需要在该 capability 为 true 后再执行。
+10. 对包含 `0005_wechat_retro_opt` 的版本，确认 `health().schema_revision == "0005_wechat_retro_opt"`，且 `health().capabilities.wechat_retrospective_topic_optimizer == true`；`tools/list` 应包含 `upsert_topic_performance`、`list_topic_performance`、`create_wechat_retrospective_report`、`list_wechat_retrospective_reports`、`create_topic_optimization_suggestions`、`list_approved_topic_ranking_hints`、`create_learning_candidates`、`review_learning_candidate`。agents 侧 live smoke 需要在该 capability 为 true 后再执行。
 11. 确认无误后归档原仓。
 
 在切换完成前，原仓的运行态保持可用，两者可并存。

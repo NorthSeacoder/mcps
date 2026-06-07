@@ -32,7 +32,7 @@
 
 **Overall**: CONDITIONAL PASS
 
-**三维不一致说明**: 当前只能宣布 hermes-db 本地实现准备好，不能宣布 feature 完成。完成条件仍依赖部署 `0005_wechat_retrospective_topic_optimizer` migration、新镜像 health capability true、以及 agents live smoke。
+**三维不一致说明**: 当前只能宣布 hermes-db 本地实现准备好，不能宣布 feature 完成。完成条件仍依赖部署 `0005_wechat_retro_opt` migration、新镜像 health capability true、以及 agents live smoke。
 
 ## Workflow Replay
 

@@ -1,6 +1,6 @@
 """add wechat retrospective topic optimizer
 
-Revision ID: 0005_wechat_retrospective_topic_optimizer
+Revision ID: 0005_wechat_retro_opt
 Revises: 0004_wechat_analytics_ingestion
 Create Date: 2026-06-07
 """
@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 
 
-revision: str = "0005_wechat_retrospective_topic_optimizer"
+revision: str = "0005_wechat_retro_opt"
 down_revision: Union[str, None] = "0004_wechat_analytics_ingestion"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

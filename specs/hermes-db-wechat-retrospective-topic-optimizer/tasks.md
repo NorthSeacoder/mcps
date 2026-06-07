@@ -20,7 +20,7 @@
 
 **目标**: 建立 retrospective MVP 表、约束、索引和 migration SQL 测试基础。
 
-- [x] T001 [FR-001..FR-004] 新增 Alembic revision `0005_wechat_retrospective_topic_optimizer`
+- [x] T001 [FR-001..FR-004] 新增 Alembic revision `0005_wechat_retro_opt`
   - scope: `packages/hermes-db/migrations/versions/0005_wechat_retrospective_topic_optimizer.py`
   - maps_to: FR-001 / FR-002 / FR-003 / FR-004 / ADR-001 / 可用性
   - verify: migration declares `down_revision = "0004_wechat_analytics_ingestion"` and only adds retrospective tables.

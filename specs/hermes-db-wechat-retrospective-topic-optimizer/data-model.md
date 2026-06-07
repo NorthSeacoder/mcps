@@ -373,7 +373,7 @@ Indexes should be created with `CREATE INDEX IF NOT EXISTS` using the names list
 
 ## Migration Notes
 
-- Alembic revision: `0005_wechat_retrospective_topic_optimizer`
+- Alembic revision: `0005_wechat_retro_opt`
 - Down revision: `0004_wechat_analytics_ingestion`
 - Rollback order:
   1. `learning_candidates`

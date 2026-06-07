@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     bucket_hard_threshold: float = 0.95
     bucket_soft_threshold: float = 0.80
     bucket_revisit_days: int = 90
-    version: str = "0.2.13"
+    version: str = "0.2.14"
 
 
 settings = Settings()

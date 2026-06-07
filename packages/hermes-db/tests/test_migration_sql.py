@@ -88,6 +88,7 @@ def test_wechat_retrospective_topic_optimizer_migration_contains_required_schema
         "migrations/versions/0005_wechat_retrospective_topic_optimizer.py"
     ).read_text()
 
+    assert 'revision: str = "0005_wechat_retro_opt"' in migration
     assert 'down_revision: Union[str, None] = "0004_wechat_analytics_ingestion"' in migration
     assert "CREATE TABLE IF NOT EXISTS hermes.topic_performance" in migration
     assert "CREATE TABLE IF NOT EXISTS hermes.wechat_retrospective_reports" in migration
