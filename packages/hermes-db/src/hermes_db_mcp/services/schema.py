@@ -430,3 +430,246 @@ async def inspect_wechat_analytics_ingestion_schema(pool: asyncpg.Pool) -> dict[
             "idx_wechat_article_channel_daily_import_run",
         }.issubset(indexes),
     }
+
+
+async def inspect_wechat_retrospective_topic_optimizer_schema(
+    pool: asyncpg.Pool,
+) -> dict[str, bool]:
+    performance_columns = await _fetch_column_names(pool, "hermes", "topic_performance")
+    report_columns = await _fetch_column_names(pool, "hermes", "wechat_retrospective_reports")
+    suggestion_columns = await _fetch_column_names(
+        pool,
+        "hermes",
+        "topic_optimization_suggestions",
+    )
+    candidate_columns = await _fetch_column_names(pool, "hermes", "learning_candidates")
+    performance_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "topic_performance_pkey",
+            "topic_performance_article_id_fkey",
+            "topic_performance_topic_id_fkey",
+            "uq_topic_performance_identity",
+            "chk_topic_performance_scores_range",
+            "chk_topic_performance_confidence_range",
+        ),
+        table_name="topic_performance",
+    )
+    report_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "wechat_retrospective_reports_pkey",
+            "wechat_retrospective_reports_article_id_fkey",
+            "chk_wechat_retrospective_reports_type",
+            "chk_wechat_retrospective_reports_generation_mode",
+            "chk_wechat_retrospective_reports_status",
+            "chk_wechat_retrospective_reports_period",
+            "chk_wechat_retrospective_reports_sample_size",
+        ),
+        table_name="wechat_retrospective_reports",
+    )
+    suggestion_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "topic_optimization_suggestions_pkey",
+            "topic_optimization_suggestions_report_id_fkey",
+            "chk_topic_optimization_suggestions_type",
+            "chk_topic_optimization_suggestions_target_kind",
+            "chk_topic_optimization_suggestions_review_status",
+            "chk_topic_optimization_suggestions_confidence",
+            "chk_topic_optimization_suggestions_target_ref",
+        ),
+        table_name="topic_optimization_suggestions",
+    )
+    candidate_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "learning_candidates_pkey",
+            "learning_candidates_source_report_id_fkey",
+            "chk_learning_candidates_type",
+            "chk_learning_candidates_status",
+            "chk_learning_candidates_confidence",
+        ),
+        table_name="learning_candidates",
+    )
+    indexes = await _fetch_index_names(
+        pool,
+        "hermes",
+        (
+            "idx_topic_performance_account_stat",
+            "idx_topic_performance_article_stat",
+            "idx_topic_performance_topic_stat",
+            "idx_topic_performance_window_stat",
+            "idx_topic_performance_scoring_version",
+            "idx_wechat_retrospective_reports_account_period",
+            "idx_wechat_retrospective_reports_account_type_created",
+            "idx_wechat_retrospective_reports_article",
+            "idx_wechat_retrospective_reports_status_created",
+            "idx_topic_optimization_suggestions_account_status_target",
+            "idx_topic_optimization_suggestions_account_target_key",
+            "idx_topic_optimization_suggestions_account_target_id",
+            "idx_topic_optimization_suggestions_report",
+            "idx_topic_optimization_suggestions_expires_at",
+            "idx_topic_optimization_suggestions_approved_hints",
+            "idx_learning_candidates_account_status_type",
+            "idx_learning_candidates_source_report",
+            "idx_learning_candidates_domain",
+            "idx_learning_candidates_policy_id",
+        ),
+    )
+
+    performance_required = {
+        "performance_id",
+        "account",
+        "article_id",
+        "topic_id",
+        "stat_date",
+        "window_label",
+        "scoring_version",
+        "baseline_version",
+        "normalized_score",
+        "read_score",
+        "engagement_score",
+        "share_score",
+        "conversion_score",
+        "confidence",
+        "provisional",
+        "low_sample_size",
+        "metric_snapshot_ids_json",
+        "baseline_snapshot_json",
+        "diagnosis_json",
+        "evidence_refs_json",
+        "warnings_json",
+        "created_at",
+        "updated_at",
+    }
+    report_required = {
+        "report_id",
+        "account",
+        "report_type",
+        "period_start",
+        "period_end",
+        "article_id",
+        "scoring_version",
+        "generation_mode",
+        "status",
+        "sample_size",
+        "low_sample_size",
+        "performance_ids_json",
+        "summary_json",
+        "narrative_markdown",
+        "high_performing_themes_json",
+        "low_performing_themes_json",
+        "title_patterns_json",
+        "recommendations_json",
+        "evidence_refs_json",
+        "warnings_json",
+        "created_at",
+        "updated_at",
+    }
+    suggestion_required = {
+        "suggestion_id",
+        "account",
+        "report_id",
+        "suggestion_type",
+        "target_kind",
+        "target_id",
+        "target_key",
+        "current_value_json",
+        "proposed_value_json",
+        "rationale",
+        "confidence",
+        "evidence_refs_json",
+        "review_status",
+        "reviewed_by",
+        "reviewed_at",
+        "review_note",
+        "applied_at",
+        "application_trace_id",
+        "expires_at",
+        "created_at",
+        "updated_at",
+    }
+    candidate_required = {
+        "candidate_id",
+        "account",
+        "domain",
+        "source_report_id",
+        "source_suggestion_ids_json",
+        "candidate_type",
+        "scope_json",
+        "trigger_conditions_json",
+        "proposed_policy_json",
+        "confidence",
+        "evidence_refs_json",
+        "status",
+        "policy_id",
+        "reviewed_by",
+        "reviewed_at",
+        "review_note",
+        "created_at",
+        "updated_at",
+    }
+
+    return {
+        "wechat_retrospective_topic_optimizer": performance_required.issubset(
+            performance_columns
+        )
+        and report_required.issubset(report_columns)
+        and suggestion_required.issubset(suggestion_columns)
+        and candidate_required.issubset(candidate_columns)
+        and {
+            "topic_performance_pkey",
+            "topic_performance_article_id_fkey",
+            "topic_performance_topic_id_fkey",
+            "uq_topic_performance_identity",
+            "chk_topic_performance_scores_range",
+            "chk_topic_performance_confidence_range",
+        }.issubset(performance_constraints)
+        and {
+            "wechat_retrospective_reports_pkey",
+            "wechat_retrospective_reports_article_id_fkey",
+            "chk_wechat_retrospective_reports_type",
+            "chk_wechat_retrospective_reports_generation_mode",
+            "chk_wechat_retrospective_reports_status",
+            "chk_wechat_retrospective_reports_period",
+            "chk_wechat_retrospective_reports_sample_size",
+        }.issubset(report_constraints)
+        and {
+            "topic_optimization_suggestions_pkey",
+            "topic_optimization_suggestions_report_id_fkey",
+            "chk_topic_optimization_suggestions_type",
+            "chk_topic_optimization_suggestions_target_kind",
+            "chk_topic_optimization_suggestions_review_status",
+            "chk_topic_optimization_suggestions_confidence",
+            "chk_topic_optimization_suggestions_target_ref",
+        }.issubset(suggestion_constraints)
+        and {
+            "learning_candidates_pkey",
+            "learning_candidates_source_report_id_fkey",
+            "chk_learning_candidates_type",
+            "chk_learning_candidates_status",
+            "chk_learning_candidates_confidence",
+        }.issubset(candidate_constraints)
+        and {
+            "idx_topic_performance_account_stat",
+            "idx_topic_performance_article_stat",
+            "idx_topic_performance_topic_stat",
+            "idx_topic_performance_window_stat",
+            "idx_topic_performance_scoring_version",
+            "idx_wechat_retrospective_reports_account_period",
+            "idx_wechat_retrospective_reports_account_type_created",
+            "idx_wechat_retrospective_reports_article",
+            "idx_wechat_retrospective_reports_status_created",
+            "idx_topic_optimization_suggestions_account_status_target",
+            "idx_topic_optimization_suggestions_account_target_key",
+            "idx_topic_optimization_suggestions_account_target_id",
+            "idx_topic_optimization_suggestions_report",
+            "idx_topic_optimization_suggestions_expires_at",
+            "idx_topic_optimization_suggestions_approved_hints",
+            "idx_learning_candidates_account_status_type",
+            "idx_learning_candidates_source_report",
+            "idx_learning_candidates_domain",
+            "idx_learning_candidates_policy_id",
+        }.issubset(indexes),
+    }

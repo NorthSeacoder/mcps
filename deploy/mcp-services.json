@@ -29,7 +29,8 @@
             "workflow_runs",
             "workflow_artifacts",
             "wechat_publication_ledger",
-            "wechat_analytics_ingestion"
+            "wechat_analytics_ingestion",
+            "wechat_retrospective_topic_optimizer"
           ]
         }
       }

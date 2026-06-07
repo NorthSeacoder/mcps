@@ -8,7 +8,7 @@ Topic 写接口契约、常量、校验 helper 和结构化结果模型。
 - 通用校验 helper
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import TypedDict, NotRequired
 from uuid import UUID
 
@@ -68,6 +68,8 @@ MAX_WECHAT_ARTICLE_LIMIT = 200
 MAX_WECHAT_ARTICLE_REF_LENGTH = 2048
 DEFAULT_WECHAT_ANALYTICS_LIMIT = 50
 MAX_WECHAT_ANALYTICS_LIMIT = 200
+DEFAULT_WECHAT_RETROSPECTIVE_LIMIT = 50
+MAX_WECHAT_RETROSPECTIVE_LIMIT = 200
 
 WECHAT_ARTICLE_STATUSES = frozenset(
     [
@@ -145,6 +147,53 @@ WECHAT_ANALYTICS_CHANNEL_COUNT_FIELDS = frozenset(
     [
         "read_user_count",
         "share_user_count",
+    ]
+)
+
+WECHAT_RETROSPECTIVE_REPORT_TYPES = frozenset(
+    ["article", "weekly", "monthly", "custom_period"]
+)
+WECHAT_RETROSPECTIVE_GENERATION_MODES = frozenset(
+    ["structured_only", "structured_plus_llm"]
+)
+WECHAT_RETROSPECTIVE_REPORT_STATUSES = frozenset(
+    ["draft", "completed", "completed_with_warnings", "failed"]
+)
+TOPIC_OPTIMIZATION_SUGGESTION_TYPES = frozenset(
+    ["revisit", "cooldown", "priority_adjust", "ranking_hint", "seed_prompt_hint"]
+)
+TOPIC_OPTIMIZATION_TARGET_KINDS = frozenset(
+    ["topic", "mother_theme", "column", "title_pattern", "account"]
+)
+TOPIC_OPTIMIZATION_REVIEW_STATUSES = frozenset(
+    ["pending", "approved", "rejected", "expired", "applied"]
+)
+TOPIC_OPTIMIZATION_REVIEW_TARGET_STATUSES = frozenset(
+    ["approved", "rejected", "expired"]
+)
+TOPIC_OPTIMIZATION_APPROVED_HINT_STATUSES = frozenset(["approved", "applied"])
+LEARNING_CANDIDATE_TYPES = frozenset(
+    [
+        "topic_strategy",
+        "title_strategy",
+        "column_strategy",
+        "writing_constraint",
+        "review_gate",
+    ]
+)
+LEARNING_CANDIDATE_STATUSES = frozenset(
+    ["pending_review", "approved", "rejected", "exported_to_policy", "disabled"]
+)
+LEARNING_CANDIDATE_REVIEW_TARGET_STATUSES = frozenset(
+    ["approved", "rejected", "disabled"]
+)
+RETROSPECTIVE_SCORE_FIELDS = frozenset(
+    [
+        "normalized_score",
+        "read_score",
+        "engagement_score",
+        "share_score",
+        "conversion_score",
     ]
 )
 
@@ -913,6 +962,599 @@ def validate_wechat_metric_query(
             field="date_from",
             details={"reason": "date_from_after_date_to"},
         )
+    return None
+
+
+def validate_retrospective_pagination(limit: int, offset: int) -> ToolError | None:
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        return error("invalid_field", field="limit", details={"actual": limit})
+    if limit < 1 or limit > MAX_WECHAT_RETROSPECTIVE_LIMIT:
+        return error(
+            "invalid_field",
+            field="limit",
+            details={
+                "min": 1,
+                "max": MAX_WECHAT_RETROSPECTIVE_LIMIT,
+                "actual": limit,
+            },
+        )
+    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+        return error("invalid_field", field="offset", details={"actual": offset})
+    return None
+
+
+def _validate_allowed_value(
+    value: str | None,
+    field: str,
+    allowed: frozenset[str],
+    *,
+    required: bool = True,
+) -> ToolError | None:
+    value = _clean_text(value)
+    if not value:
+        return error("missing_required_field", field=field) if required else None
+    if value not in allowed:
+        return error(
+            "invalid_field",
+            field=field,
+            details={"valid_values": sorted(allowed), "actual": value},
+        )
+    return None
+
+
+def _validate_score(value, field: str) -> ToolError | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 or value > 100:
+        return error("invalid_field", field=field, details={"min": 0, "max": 100, "actual": value})
+    return None
+
+
+def _validate_probability(value, field: str) -> ToolError | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 or value > 1:
+        return error("invalid_field", field=field, details={"min": 0, "max": 1, "actual": value})
+    return None
+
+
+def _validate_json_object(record: dict, field: str, *, required: bool = True) -> ToolError | None:
+    if field not in record:
+        return error("missing_required_field", field=field) if required else None
+    if not isinstance(record.get(field), dict):
+        return error("invalid_field", field=field)
+    return None
+
+
+def _validate_json_array(record: dict, field: str, *, required: bool = True) -> ToolError | None:
+    if field not in record:
+        return error("missing_required_field", field=field) if required else None
+    if not isinstance(record.get(field), list):
+        return error("invalid_field", field=field)
+    return None
+
+
+def _validate_optional_iso_date(value: str | None, field: str) -> ToolError | None:
+    if value is not None and not _is_valid_iso_date(value):
+        return error("invalid_field", field=field, details={"actual": value})
+    return None
+
+
+def _validate_date_range(date_from: str | None, date_to: str | None) -> ToolError | None:
+    for field, value in (("date_from", date_from), ("date_to", date_to)):
+        date_err = _validate_optional_iso_date(value, field)
+        if date_err:
+            return date_err
+    if date_from and date_to and date.fromisoformat(date_from) > date.fromisoformat(date_to):
+        return error(
+            "invalid_filter",
+            field="date_from",
+            details={"reason": "date_from_after_date_to"},
+        )
+    return None
+
+
+def _is_valid_iso_datetime(value: str | None) -> bool:
+    if not _clean_text(value):
+        return False
+    try:
+        datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _validate_optional_iso_datetime(value: str | None, field: str) -> ToolError | None:
+    if value is not None and not _is_valid_iso_datetime(value):
+        return error("invalid_field", field=field, details={"actual": value})
+    return None
+
+
+def _prefix_error_field(err: ToolError, prefix: str) -> ToolError:
+    err["field"] = f"{prefix}.{err.get('field', 'record')}"
+    return err
+
+
+def _validate_uuid_array_values(record: dict, field: str, *, required: bool = True) -> ToolError | None:
+    array_err = _validate_json_array(record, field, required=required)
+    if array_err:
+        return array_err
+    if field not in record:
+        return None
+    for idx, value in enumerate(record.get(field) or []):
+        _, uuid_err = validate_optional_uuid(value, f"{field}[{idx}]")
+        if uuid_err:
+            return uuid_err
+    return None
+
+
+def validate_topic_performance_payload(record: dict) -> ToolError | None:
+    if not isinstance(record, dict):
+        return error("invalid_field", field="input")
+
+    for field in (
+        "account",
+        "article_id",
+        "stat_date",
+        "window_label",
+        "scoring_version",
+        "baseline_version",
+    ):
+        err = validate_required_text(record.get(field), field)
+        if err:
+            return err
+
+    for field in ("article_id", "topic_id"):
+        _, uuid_err = validate_optional_uuid(record.get(field), field)
+        if uuid_err:
+            return uuid_err
+
+    date_err = _validate_optional_iso_date(record.get("stat_date"), "stat_date")
+    if date_err:
+        return date_err
+
+    for field in RETROSPECTIVE_SCORE_FIELDS:
+        score_err = _validate_score(record.get(field), field)
+        if score_err:
+            return score_err
+
+    confidence_err = _validate_probability(record.get("confidence"), "confidence")
+    if confidence_err:
+        return confidence_err
+
+    for field in ("provisional", "low_sample_size"):
+        if field in record and not isinstance(record.get(field), bool):
+            return error("invalid_field", field=field)
+
+    for field in ("metric_snapshot_ids", "warnings"):
+        array_err = _validate_json_array(record, field)
+        if array_err:
+            return array_err
+    for field in ("baseline_snapshot", "diagnosis", "evidence_refs"):
+        object_err = _validate_json_object(record, field)
+        if object_err:
+            return object_err
+    return None
+
+
+def validate_topic_performance_query(
+    *,
+    account: str | None = None,
+    article_id: str | None = None,
+    topic_id: str | None = None,
+    window_label: str | None = None,
+    scoring_version: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = DEFAULT_WECHAT_RETROSPECTIVE_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [account, article_id, topic_id, window_label, scoring_version, date_from, date_to]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_retrospective_pagination(limit, offset)
+    if page_err:
+        return page_err
+    for field, value in (("article_id", article_id), ("topic_id", topic_id)):
+        _, uuid_err = validate_optional_uuid(value, field)
+        if uuid_err:
+            return uuid_err
+    return _validate_date_range(date_from, date_to)
+
+
+def validate_retrospective_report_payload(record: dict) -> ToolError | None:
+    if not isinstance(record, dict):
+        return error("invalid_field", field="input")
+
+    for field in ("account", "period_start", "period_end", "scoring_version"):
+        err = validate_required_text(record.get(field), field)
+        if err:
+            return err
+    for field, allowed in (
+        ("report_type", WECHAT_RETROSPECTIVE_REPORT_TYPES),
+        ("generation_mode", WECHAT_RETROSPECTIVE_GENERATION_MODES),
+        ("status", WECHAT_RETROSPECTIVE_REPORT_STATUSES),
+    ):
+        value_err = _validate_allowed_value(record.get(field), field, allowed)
+        if value_err:
+            return value_err
+
+    date_err = _validate_date_range(record.get("period_start"), record.get("period_end"))
+    if date_err:
+        if date_err.get("field") == "date_from":
+            date_err["field"] = "period_start"
+        return date_err
+    _, article_err = validate_optional_uuid(record.get("article_id"), "article_id")
+    if article_err:
+        return article_err
+
+    sample_size = record.get("sample_size", 0)
+    if isinstance(sample_size, bool) or not isinstance(sample_size, int) or sample_size < 0:
+        return error("invalid_field", field="sample_size", details={"actual": sample_size})
+    if "low_sample_size" in record and not isinstance(record.get("low_sample_size"), bool):
+        return error("invalid_field", field="low_sample_size")
+
+    for field in (
+        "performance_ids",
+        "high_performing_themes",
+        "low_performing_themes",
+        "title_patterns",
+        "recommendations",
+        "warnings",
+    ):
+        array_err = _validate_json_array(record, field)
+        if array_err:
+            return array_err
+    for field in ("summary", "evidence_refs"):
+        object_err = _validate_json_object(record, field)
+        if object_err:
+            return object_err
+    return None
+
+
+def validate_retrospective_report_query(
+    *,
+    account: str | None = None,
+    report_type: str | None = None,
+    article_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = DEFAULT_WECHAT_RETROSPECTIVE_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [account, report_type, article_id, date_from, date_to]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_retrospective_pagination(limit, offset)
+    if page_err:
+        return page_err
+    type_err = _validate_allowed_value(
+        report_type,
+        "report_type",
+        WECHAT_RETROSPECTIVE_REPORT_TYPES,
+        required=False,
+    )
+    if type_err:
+        return type_err
+    _, article_err = validate_optional_uuid(article_id, "article_id")
+    if article_err:
+        return article_err
+    return _validate_date_range(date_from, date_to)
+
+
+def _validate_topic_suggestion_item(
+    item: dict,
+    *,
+    account: str,
+    report_id: str,
+) -> ToolError | None:
+    if not isinstance(item, dict):
+        return error("invalid_field", field="items[]")
+    item_account = item.get("account") or account
+    if item_account != account:
+        return error("invalid_field", field="account", details={"reason": "account_mismatch"})
+    item_report_id = item.get("report_id") or report_id
+    if item_report_id != report_id:
+        return error("invalid_field", field="report_id", details={"reason": "report_id_mismatch"})
+
+    for field, allowed in (
+        ("suggestion_type", TOPIC_OPTIMIZATION_SUGGESTION_TYPES),
+        ("target_kind", TOPIC_OPTIMIZATION_TARGET_KINDS),
+    ):
+        value_err = _validate_allowed_value(item.get(field), field, allowed)
+        if value_err:
+            return value_err
+
+    target_kind = item.get("target_kind")
+    target_id = _clean_text(item.get("target_id"))
+    target_key = _clean_text(item.get("target_key"))
+    if target_id:
+        _, target_err = validate_optional_uuid(target_id, "target_id")
+        if target_err:
+            return target_err
+    if target_kind != "account" and not target_id and not target_key:
+        return error("missing_required_field", field="target_id")
+
+    for field in ("proposed_value", "evidence_refs"):
+        object_err = _validate_json_object(item, field)
+        if object_err:
+            return object_err
+    object_err = _validate_json_object(item, "current_value", required=False)
+    if object_err:
+        return object_err
+    rationale_err = validate_required_text(item.get("rationale"), "rationale")
+    if rationale_err:
+        return rationale_err
+    confidence_err = _validate_probability(item.get("confidence"), "confidence")
+    if confidence_err:
+        return confidence_err
+    review_status = item.get("review_status", "pending")
+    if review_status != "pending":
+        return error("invalid_transition", field="review_status")
+    return _validate_optional_iso_datetime(item.get("expires_at"), "expires_at")
+
+
+def validate_topic_suggestions_payload(
+    *,
+    account: str | None,
+    report_id: str | None,
+    items: list[dict] | None,
+) -> ToolError | None:
+    account_err = validate_required_text(account, "account")
+    if account_err:
+        return account_err
+    report_err = validate_required_text(report_id, "report_id")
+    if report_err:
+        return report_err
+    _, uuid_err = validate_optional_uuid(report_id, "report_id")
+    if uuid_err:
+        return uuid_err
+    if not items:
+        return error("missing_required_field", field="items")
+    if not isinstance(items, list):
+        return error("invalid_field", field="items")
+    for idx, item in enumerate(items):
+        item_err = _validate_topic_suggestion_item(item, account=account, report_id=report_id)
+        if item_err:
+            return _prefix_error_field(item_err, f"items[{idx}]")
+    return None
+
+
+def validate_topic_optimization_suggestion_query(
+    *,
+    account: str | None = None,
+    report_id: str | None = None,
+    review_status: str | None = None,
+    suggestion_type: str | None = None,
+    target_kind: str | None = None,
+    target_id: str | None = None,
+    target_key: str | None = None,
+    limit: int = DEFAULT_WECHAT_RETROSPECTIVE_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [
+        account,
+        report_id,
+        review_status,
+        suggestion_type,
+        target_kind,
+        target_id,
+        target_key,
+    ]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_retrospective_pagination(limit, offset)
+    if page_err:
+        return page_err
+    for field, value in (("report_id", report_id), ("target_id", target_id)):
+        _, uuid_err = validate_optional_uuid(value, field)
+        if uuid_err:
+            return uuid_err
+    for field, value, allowed in (
+        ("review_status", review_status, TOPIC_OPTIMIZATION_REVIEW_STATUSES),
+        ("suggestion_type", suggestion_type, TOPIC_OPTIMIZATION_SUGGESTION_TYPES),
+        ("target_kind", target_kind, TOPIC_OPTIMIZATION_TARGET_KINDS),
+    ):
+        value_err = _validate_allowed_value(value, field, allowed, required=False)
+        if value_err:
+            return value_err
+    return None
+
+
+def validate_suggestion_review(
+    *,
+    suggestion_id: str | None,
+    review_status: str | None,
+    reviewed_by: str | None = None,
+    review_note: str | None = None,
+    application_trace_id: str | None = None,
+) -> ToolError | None:
+    id_err = validate_required_text(suggestion_id, "suggestion_id")
+    if id_err:
+        return id_err
+    _, uuid_err = validate_optional_uuid(suggestion_id, "suggestion_id")
+    if uuid_err:
+        return uuid_err
+    status_err = _validate_allowed_value(
+        review_status,
+        "review_status",
+        TOPIC_OPTIMIZATION_REVIEW_TARGET_STATUSES,
+    )
+    if status_err:
+        if status_err["error"] == "invalid_field":
+            status_err["error"] = "invalid_transition"
+        return status_err
+    if reviewed_by is not None and not _clean_text(reviewed_by):
+        return error("invalid_field", field="reviewed_by")
+    if review_note is not None and not isinstance(review_note, str):
+        return error("invalid_field", field="review_note")
+    if application_trace_id is not None:
+        return error("invalid_transition", field="application_trace_id")
+    return None
+
+
+def validate_approved_ranking_hint_query(
+    *,
+    account: str | None,
+    target_kind: str | None = None,
+    target_id: str | None = None,
+    target_key: str | None = None,
+    limit: int = DEFAULT_WECHAT_RETROSPECTIVE_LIMIT,
+    offset: int = 0,
+) -> ToolError | None:
+    account_err = validate_required_text(account, "account")
+    if account_err:
+        return account_err
+    page_err = validate_retrospective_pagination(limit, offset)
+    if page_err:
+        return page_err
+    kind_err = _validate_allowed_value(
+        target_kind,
+        "target_kind",
+        TOPIC_OPTIMIZATION_TARGET_KINDS,
+        required=False,
+    )
+    if kind_err:
+        return kind_err
+    _, target_err = validate_optional_uuid(target_id, "target_id")
+    if target_err:
+        return target_err
+    if target_id and target_key:
+        return error("invalid_filter", field="target_id", details={"reason": "ambiguous_target"})
+    return None
+
+
+def _validate_learning_candidate_item(
+    item: dict,
+    *,
+    account: str,
+    source_report_id: str,
+) -> ToolError | None:
+    if not isinstance(item, dict):
+        return error("invalid_field", field="items[]")
+    item_account = item.get("account") or account
+    if item_account != account:
+        return error("invalid_field", field="account", details={"reason": "account_mismatch"})
+    item_report_id = item.get("source_report_id") or source_report_id
+    if item_report_id != source_report_id:
+        return error(
+            "invalid_field",
+            field="source_report_id",
+            details={"reason": "source_report_id_mismatch"},
+        )
+
+    for field, allowed in (
+        ("candidate_type", LEARNING_CANDIDATE_TYPES),
+        ("status", LEARNING_CANDIDATE_STATUSES),
+    ):
+        value_err = _validate_allowed_value(item.get(field), field, allowed)
+        if value_err:
+            return value_err
+    if item.get("status") != "pending_review":
+        return error("invalid_transition", field="status")
+    domain_err = validate_required_text(item.get("domain"), "domain")
+    if domain_err:
+        return domain_err
+    uuid_array_err = _validate_uuid_array_values(item, "source_suggestion_ids")
+    if uuid_array_err:
+        return uuid_array_err
+    for field in ("scope", "trigger_conditions", "proposed_policy", "evidence_refs"):
+        object_err = _validate_json_object(item, field)
+        if object_err:
+            return object_err
+    return _validate_probability(item.get("confidence"), "confidence")
+
+
+def validate_learning_candidates_payload(
+    *,
+    account: str | None,
+    source_report_id: str | None,
+    items: list[dict] | None,
+) -> ToolError | None:
+    account_err = validate_required_text(account, "account")
+    if account_err:
+        return account_err
+    report_err = validate_required_text(source_report_id, "source_report_id")
+    if report_err:
+        return report_err
+    _, uuid_err = validate_optional_uuid(source_report_id, "source_report_id")
+    if uuid_err:
+        return uuid_err
+    if not items:
+        return error("missing_required_field", field="items")
+    if not isinstance(items, list):
+        return error("invalid_field", field="items")
+    for idx, item in enumerate(items):
+        item_err = _validate_learning_candidate_item(
+            item,
+            account=account,
+            source_report_id=source_report_id,
+        )
+        if item_err:
+            return _prefix_error_field(item_err, f"items[{idx}]")
+    return None
+
+
+def validate_learning_candidate_query(
+    *,
+    account: str | None = None,
+    domain: str | None = None,
+    source_report_id: str | None = None,
+    status: str | None = None,
+    candidate_type: str | None = None,
+    limit: int = DEFAULT_WECHAT_RETROSPECTIVE_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [account, domain, source_report_id, status, candidate_type]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_retrospective_pagination(limit, offset)
+    if page_err:
+        return page_err
+    _, report_err = validate_optional_uuid(source_report_id, "source_report_id")
+    if report_err:
+        return report_err
+    for field, value, allowed in (
+        ("status", status, LEARNING_CANDIDATE_STATUSES),
+        ("candidate_type", candidate_type, LEARNING_CANDIDATE_TYPES),
+    ):
+        value_err = _validate_allowed_value(value, field, allowed, required=False)
+        if value_err:
+            return value_err
+    return None
+
+
+def validate_learning_candidate_review(
+    *,
+    candidate_id: str | None,
+    status: str | None,
+    reviewed_by: str | None = None,
+    review_note: str | None = None,
+    policy_id: str | None = None,
+) -> ToolError | None:
+    id_err = validate_required_text(candidate_id, "candidate_id")
+    if id_err:
+        return id_err
+    _, uuid_err = validate_optional_uuid(candidate_id, "candidate_id")
+    if uuid_err:
+        return uuid_err
+    status_err = _validate_allowed_value(
+        status,
+        "status",
+        LEARNING_CANDIDATE_REVIEW_TARGET_STATUSES,
+    )
+    if status_err:
+        if status_err["error"] == "invalid_field":
+            status_err["error"] = "invalid_transition"
+        return status_err
+    if reviewed_by is not None and not _clean_text(reviewed_by):
+        return error("invalid_field", field="reviewed_by")
+    if review_note is not None and not isinstance(review_note, str):
+        return error("invalid_field", field="review_note")
+    if policy_id is not None and not _clean_text(policy_id):
+        return error("invalid_field", field="policy_id")
     return None
 
 

@@ -81,3 +81,48 @@ def test_wechat_analytics_ingestion_migration_contains_required_schema_changes()
     assert "DROP TABLE IF EXISTS hermes.wechat_article_channel_daily_metrics" in migration
     assert "DROP TABLE IF EXISTS hermes.wechat_article_metric_snapshots" in migration
     assert "DROP TABLE IF EXISTS hermes.analytics_import_runs" in migration
+
+
+def test_wechat_retrospective_topic_optimizer_migration_contains_required_schema_changes():
+    migration = Path(
+        "migrations/versions/0005_wechat_retrospective_topic_optimizer.py"
+    ).read_text()
+
+    assert 'down_revision: Union[str, None] = "0004_wechat_analytics_ingestion"' in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.topic_performance" in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.wechat_retrospective_reports" in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.topic_optimization_suggestions" in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.learning_candidates" in migration
+    assert "REFERENCES hermes.wechat_articles(article_id) ON DELETE CASCADE" in migration
+    assert "REFERENCES hermes.topics(id) ON DELETE SET NULL" in migration
+    assert "REFERENCES hermes.wechat_articles(article_id) ON DELETE SET NULL" in migration
+    assert (
+        "REFERENCES hermes.wechat_retrospective_reports(report_id) ON DELETE CASCADE"
+        in migration
+    )
+    assert "uq_topic_performance_identity" in migration
+    assert "chk_topic_performance_scores_range" in migration
+    assert "chk_topic_performance_confidence_range" in migration
+    assert "chk_wechat_retrospective_reports_type" in migration
+    assert "chk_wechat_retrospective_reports_generation_mode" in migration
+    assert "chk_wechat_retrospective_reports_status" in migration
+    assert "chk_wechat_retrospective_reports_period" in migration
+    assert "chk_topic_optimization_suggestions_type" in migration
+    assert "chk_topic_optimization_suggestions_target_kind" in migration
+    assert "chk_topic_optimization_suggestions_review_status" in migration
+    assert "chk_topic_optimization_suggestions_target_ref" in migration
+    assert "chk_learning_candidates_type" in migration
+    assert "chk_learning_candidates_status" in migration
+    assert "idx_topic_performance_account_stat" in migration
+    assert "idx_topic_performance_article_stat" in migration
+    assert "idx_topic_performance_topic_stat" in migration
+    assert "idx_wechat_retrospective_reports_account_period" in migration
+    assert "idx_wechat_retrospective_reports_account_type_created" in migration
+    assert "idx_topic_optimization_suggestions_account_status_target" in migration
+    assert "idx_topic_optimization_suggestions_approved_hints" in migration
+    assert "idx_learning_candidates_account_status_type" in migration
+    assert "idx_learning_candidates_source_report" in migration
+    assert "DROP TABLE IF EXISTS hermes.learning_candidates" in migration
+    assert "DROP TABLE IF EXISTS hermes.topic_optimization_suggestions" in migration
+    assert "DROP TABLE IF EXISTS hermes.wechat_retrospective_reports" in migration
+    assert "DROP TABLE IF EXISTS hermes.topic_performance" in migration

@@ -28,7 +28,7 @@ async def test_health_returns_version_and_capabilities():
 
     result = await health(ctx)
 
-    assert result["version"] == "0.2.12"
+    assert result["version"] == "0.2.13"
     assert result["capabilities"] == {
         "topic_bucket": True,
         "topic_revisit_of": True,
@@ -37,6 +37,7 @@ async def test_health_returns_version_and_capabilities():
         "workflow_artifacts": True,
         "wechat_publication_ledger": True,
         "wechat_analytics_ingestion": True,
+        "wechat_retrospective_topic_optimizer": True,
     }
     assert result["schema_revision"] == "0001_topic_revisit"
 
@@ -90,6 +91,7 @@ async def test_health_disables_capabilities_when_pg_is_unavailable(monkeypatch):
         "workflow_artifacts": False,
         "wechat_publication_ledger": False,
         "wechat_analytics_ingestion": False,
+        "wechat_retrospective_topic_optimizer": False,
     }
 
 
@@ -136,4 +138,14 @@ def schema_inspector(monkeypatch):
     monkeypatch.setattr(
         "hermes_db_mcp.tools.health.inspect_wechat_analytics_ingestion_schema",
         inspect_wechat_analytics_ingestion_schema,
+    )
+
+    async def inspect_wechat_retrospective_topic_optimizer_schema(pool):
+        return {
+            "wechat_retrospective_topic_optimizer": True,
+        }
+
+    monkeypatch.setattr(
+        "hermes_db_mcp.tools.health.inspect_wechat_retrospective_topic_optimizer_schema",
+        inspect_wechat_retrospective_topic_optimizer_schema,
     )

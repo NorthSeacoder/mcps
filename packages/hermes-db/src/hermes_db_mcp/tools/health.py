@@ -8,6 +8,7 @@ from hermes_db_mcp.services.schema import (
     inspect_topic_schema,
     inspect_wechat_analytics_ingestion_schema,
     inspect_wechat_publication_ledger_schema,
+    inspect_wechat_retrospective_topic_optimizer_schema,
     inspect_workflow_schema,
 )
 
@@ -57,6 +58,7 @@ async def health(ctx: Context) -> dict:
         "workflow_artifacts": False,
         "wechat_publication_ledger": False,
         "wechat_analytics_ingestion": False,
+        "wechat_retrospective_topic_optimizer": False,
     }
 
     if pg_ok:
@@ -73,6 +75,7 @@ async def health(ctx: Context) -> dict:
                 **await inspect_workflow_schema(app.pool),
                 **await inspect_wechat_publication_ledger_schema(app.pool),
                 **await inspect_wechat_analytics_ingestion_schema(app.pool),
+                **await inspect_wechat_retrospective_topic_optimizer_schema(app.pool),
             }
         except Exception as e:
             result["schema_error"] = str(e)
