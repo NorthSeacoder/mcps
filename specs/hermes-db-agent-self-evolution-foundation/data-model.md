@@ -287,7 +287,7 @@ Tool registration is verified by import/registration tests, not by the runtime h
 
 ## Migration Notes
 
-- Preferred Alembic revision: `0006_agent_self_evolution_foundation`.
+- Preferred Alembic revision id: `0006_agent_self_evolution` (file `0006_agent_self_evolution_foundation.py`; revision id stays <= 32 chars for `alembic_version.version_num`).
 - Expected `down_revision`: `0005_wechat_retro_opt`.
 - Migration is additive.
 - Downgrade order: drop `policy_applications` before `agent_policies`.

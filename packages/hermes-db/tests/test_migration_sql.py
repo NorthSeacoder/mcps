@@ -134,7 +134,7 @@ def test_agent_self_evolution_foundation_migration_contains_required_schema_chan
         "migrations/versions/0006_agent_self_evolution_foundation.py"
     ).read_text()
 
-    assert 'revision: str = "0006_agent_self_evolution_foundation"' in migration
+    assert 'revision: str = "0006_agent_self_evolution"' in migration
     assert 'down_revision: Union[str, None] = "0005_wechat_retro_opt"' in migration
     assert "CREATE TABLE IF NOT EXISTS hermes.agent_policies" in migration
     assert "CREATE TABLE IF NOT EXISTS hermes.policy_applications" in migration

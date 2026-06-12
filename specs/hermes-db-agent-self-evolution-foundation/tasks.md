@@ -16,7 +16,7 @@
 
 ## Phase 1: Migration and Schema Contract
 
-- [x] T001 新增 Alembic revision `0006_agent_self_evolution_foundation`
+- [x] T001 新增 Alembic revision `0006_agent_self_evolution`（revision id 限制 varchar(32)，文件名保留长名）
   - scope: `packages/hermes-db/migrations/versions/0006_agent_self_evolution_foundation.py`
   - maps_to: FR-001 / FR-002 / data-model.md
   - verify: `down_revision = "0005_wechat_retro_opt"` and migration is additive.

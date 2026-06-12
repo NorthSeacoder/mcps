@@ -61,7 +61,7 @@ Boundaries:
 
 ### Migration
 
-- Add Alembic revision `0006_agent_self_evolution_foundation`.
+- Add Alembic revision id `0006_agent_self_evolution` (file `0006_agent_self_evolution_foundation.py`).
 - Create `hermes.agent_policies`.
 - Create `hermes.policy_applications`.
 - Do not destructively alter `hermes.learning_candidates`.

@@ -1,6 +1,6 @@
 """add agent self evolution foundation
 
-Revision ID: 0006_agent_self_evolution_foundation
+Revision ID: 0006_agent_self_evolution
 Revises: 0005_wechat_retro_opt
 Create Date: 2026-06-11
 """
@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 
 
-revision: str = "0006_agent_self_evolution_foundation"
+revision: str = "0006_agent_self_evolution"
 down_revision: Union[str, None] = "0005_wechat_retro_opt"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
