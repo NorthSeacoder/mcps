@@ -127,3 +127,47 @@ def test_wechat_retrospective_topic_optimizer_migration_contains_required_schema
     assert "DROP TABLE IF EXISTS hermes.topic_optimization_suggestions" in migration
     assert "DROP TABLE IF EXISTS hermes.wechat_retrospective_reports" in migration
     assert "DROP TABLE IF EXISTS hermes.topic_performance" in migration
+
+
+def test_agent_self_evolution_foundation_migration_contains_required_schema_changes():
+    migration = Path(
+        "migrations/versions/0006_agent_self_evolution_foundation.py"
+    ).read_text()
+
+    assert 'revision: str = "0006_agent_self_evolution_foundation"' in migration
+    assert 'down_revision: Union[str, None] = "0005_wechat_retro_opt"' in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.agent_policies" in migration
+    assert "CREATE TABLE IF NOT EXISTS hermes.policy_applications" in migration
+    assert (
+        "REFERENCES hermes.learning_candidates(candidate_id) ON DELETE SET NULL"
+        in migration
+    )
+    assert (
+        "REFERENCES hermes.agent_policies(policy_version_id) ON DELETE RESTRICT"
+        in migration
+    )
+    assert "uq_agent_policies_policy_version" in migration
+    assert "uq_agent_policies_source_candidate" in migration
+    assert "chk_agent_policies_version_positive" in migration
+    assert "chk_agent_policies_status" in migration
+    assert "chk_agent_policies_policy_type" in migration
+    assert "chk_agent_policies_effective_range" in migration
+    assert "chk_agent_policies_scope_json_object" in migration
+    assert "chk_agent_policies_task_types_json_array" in migration
+    assert "chk_policy_applications_version_positive" in migration
+    assert "chk_policy_applications_status" in migration
+    assert "chk_policy_applications_error_summary_json_object" in migration
+    assert "idx_agent_policies_active_lookup" in migration
+    assert "idx_agent_policies_source_candidate" in migration
+    assert "idx_agent_policies_policy_id" in migration
+    assert "idx_agent_policies_scope_gin" in migration
+    assert "idx_agent_policies_trigger_conditions_gin" in migration
+    assert "idx_policy_applications_run" in migration
+    assert "idx_policy_applications_policy" in migration
+    assert "idx_policy_applications_policy_version" in migration
+    assert "idx_policy_applications_domain_task" in migration
+    assert "DROP TABLE IF EXISTS hermes.policy_applications" in migration
+    assert "DROP TABLE IF EXISTS hermes.agent_policies" in migration
+    assert migration.index("DROP TABLE IF EXISTS hermes.policy_applications") < migration.index(
+        "DROP TABLE IF EXISTS hermes.agent_policies"
+    )

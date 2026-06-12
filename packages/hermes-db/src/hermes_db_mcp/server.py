@@ -57,6 +57,7 @@ def register_tools():
     from hermes_db_mcp.tools import wechat_articles  # noqa: F401
     from hermes_db_mcp.tools import wechat_analytics  # noqa: F401
     from hermes_db_mcp.tools import wechat_retrospective  # noqa: F401
+    from hermes_db_mcp.tools import agent_self_evolution  # noqa: F401
 
 
 def main():

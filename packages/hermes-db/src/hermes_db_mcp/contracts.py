@@ -70,6 +70,8 @@ DEFAULT_WECHAT_ANALYTICS_LIMIT = 50
 MAX_WECHAT_ANALYTICS_LIMIT = 200
 DEFAULT_WECHAT_RETROSPECTIVE_LIMIT = 50
 MAX_WECHAT_RETROSPECTIVE_LIMIT = 200
+DEFAULT_AGENT_POLICY_LIMIT = 50
+MAX_AGENT_POLICY_LIMIT = 200
 
 WECHAT_ARTICLE_STATUSES = frozenset(
     [
@@ -187,6 +189,11 @@ LEARNING_CANDIDATE_STATUSES = frozenset(
 LEARNING_CANDIDATE_REVIEW_TARGET_STATUSES = frozenset(
     ["approved", "rejected", "disabled"]
 )
+AGENT_POLICY_TYPES = LEARNING_CANDIDATE_TYPES | frozenset(["sop"])
+AGENT_POLICY_STATUSES = frozenset(
+    ["draft", "active", "superseded", "disabled", "rolled_back", "expired"]
+)
+AGENT_APPLICATION_STATUSES = frozenset(["applied", "skipped", "blocked", "failed"])
 RETROSPECTIVE_SCORE_FIELDS = frozenset(
     [
         "normalized_score",
@@ -1555,6 +1562,196 @@ def validate_learning_candidate_review(
         return error("invalid_field", field="review_note")
     if policy_id is not None and not _clean_text(policy_id):
         return error("invalid_field", field="policy_id")
+    return None
+
+
+def validate_agent_policy_pagination(limit: int, offset: int) -> ToolError | None:
+    if limit < 1 or limit > MAX_AGENT_POLICY_LIMIT:
+        return error(
+            "invalid_field",
+            field="limit",
+            details={"min": 1, "max": MAX_AGENT_POLICY_LIMIT, "actual": limit},
+        )
+    if offset < 0:
+        return error("invalid_field", field="offset", details={"actual": offset})
+    return None
+
+
+def validate_promote_learning_candidate_to_policy_payload(input: dict) -> ToolError | None:
+    candidate_id = input.get("candidate_id")
+    id_err = validate_required_text(candidate_id, "candidate_id")
+    if id_err:
+        return id_err
+    _, uuid_err = validate_optional_uuid(candidate_id, "candidate_id")
+    if uuid_err:
+        return uuid_err
+    approved_by_err = validate_required_text(input.get("approved_by"), "approved_by")
+    if approved_by_err:
+        return approved_by_err
+    policy_type_err = _validate_allowed_value(
+        input.get("policy_type"),
+        "policy_type",
+        AGENT_POLICY_TYPES,
+        required=False,
+    )
+    if policy_type_err:
+        return policy_type_err
+    for field in ("task_types", "decision_points"):
+        array_err = _validate_json_array(input, field, required=False)
+        if array_err:
+            return array_err
+    for field in ("metadata",):
+        object_err = _validate_json_object(input, field, required=False)
+        if object_err:
+            return object_err
+    for field in ("effective_from", "effective_until"):
+        dt_err = _validate_optional_iso_datetime(input.get(field), field)
+        if dt_err:
+            return dt_err
+    priority = input.get("priority")
+    if priority is not None and not isinstance(priority, int):
+        return error("invalid_field", field="priority")
+    return None
+
+
+def validate_agent_policy_query(
+    *,
+    domain: str | None = None,
+    policy_type: str | None = None,
+    status: str | None = None,
+    source_candidate_id: str | None = None,
+    policy_id: str | None = None,
+    limit: int = DEFAULT_AGENT_POLICY_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [domain, policy_type, status, source_candidate_id, policy_id]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_agent_policy_pagination(limit, offset)
+    if page_err:
+        return page_err
+    for field, value in (
+        ("source_candidate_id", source_candidate_id),
+        ("policy_id", policy_id),
+    ):
+        _, uuid_err = validate_optional_uuid(value, field)
+        if uuid_err:
+            return uuid_err
+    for field, value, allowed in (
+        ("policy_type", policy_type, AGENT_POLICY_TYPES),
+        ("status", status, AGENT_POLICY_STATUSES),
+    ):
+        value_err = _validate_allowed_value(value, field, allowed, required=False)
+        if value_err:
+            return value_err
+    return None
+
+
+def validate_applicable_agent_policy_query(input: dict) -> ToolError | None:
+    for field in ("domain", "task_type"):
+        text_err = validate_required_text(input.get(field), field)
+        if text_err:
+            return text_err
+    scope_err = _validate_json_object(input, "scope")
+    if scope_err:
+        return scope_err
+    if input.get("decision_point") is not None and not _clean_text(input.get("decision_point")):
+        return error("invalid_field", field="decision_point")
+    dt_err = _validate_optional_iso_datetime(input.get("now"), "now")
+    if dt_err:
+        return dt_err
+    return validate_agent_policy_pagination(
+        input.get("limit", DEFAULT_AGENT_POLICY_LIMIT),
+        input.get("offset", 0),
+    )
+
+
+def validate_disable_agent_policy_payload(input: dict) -> ToolError | None:
+    for field in ("policy_id", "disabled_by", "disable_reason"):
+        text_err = validate_required_text(input.get(field), field)
+        if text_err:
+            return text_err
+    _, uuid_err = validate_optional_uuid(input.get("policy_id"), "policy_id")
+    return uuid_err
+
+
+def validate_rollback_agent_policy_payload(input: dict) -> ToolError | None:
+    for field in ("policy_id", "to_policy_version_id", "reviewed_by"):
+        text_err = validate_required_text(input.get(field), field)
+        if text_err:
+            return text_err
+    for field in ("policy_id", "to_policy_version_id"):
+        _, uuid_err = validate_optional_uuid(input.get(field), field)
+        if uuid_err:
+            return uuid_err
+    if input.get("review_note") is not None and not isinstance(input.get("review_note"), str):
+        return error("invalid_field", field="review_note")
+    return None
+
+
+def validate_record_policy_application_payload(input: dict) -> ToolError | None:
+    for field in (
+        "domain",
+        "agent_name",
+        "task_type",
+        "decision_point",
+        "policy_id",
+        "policy_version_id",
+        "application_status",
+    ):
+        text_err = validate_required_text(input.get(field), field)
+        if text_err:
+            return text_err
+    for field in ("policy_id", "policy_version_id"):
+        _, uuid_err = validate_optional_uuid(input.get(field), field)
+        if uuid_err:
+            return uuid_err
+    version = input.get("policy_version")
+    if isinstance(version, bool) or not isinstance(version, int) or version < 1:
+        return error("invalid_field", field="policy_version")
+    status_err = _validate_allowed_value(
+        input.get("application_status"),
+        "application_status",
+        AGENT_APPLICATION_STATUSES,
+    )
+    if status_err:
+        return status_err
+    for field in ("scope", "matched_conditions", "applied_action", "outcome_summary"):
+        object_err = _validate_json_object(input, field, required=False)
+        if object_err:
+            return object_err
+    object_err = _validate_json_object(input, "error_summary", required=False)
+    if object_err:
+        return object_err
+    return None
+
+
+def validate_policy_application_query(
+    *,
+    policy_id: str | None = None,
+    policy_version_id: str | None = None,
+    run_id: str | None = None,
+    domain: str | None = None,
+    task_type: str | None = None,
+    decision_point: str | None = None,
+    limit: int = DEFAULT_AGENT_POLICY_LIMIT,
+    offset: int = 0,
+    explicit_limit: bool = False,
+) -> ToolError | None:
+    filters = [policy_id, policy_version_id, run_id, domain, task_type, decision_point]
+    if not any(value is not None for value in filters) and not explicit_limit:
+        return error("invalid_filter", details={"reason": "filter_or_explicit_limit_required"})
+    page_err = validate_agent_policy_pagination(limit, offset)
+    if page_err:
+        return page_err
+    for field, value in (
+        ("policy_id", policy_id),
+        ("policy_version_id", policy_version_id),
+    ):
+        _, uuid_err = validate_optional_uuid(value, field)
+        if uuid_err:
+            return uuid_err
     return None
 
 

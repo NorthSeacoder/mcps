@@ -79,8 +79,8 @@ docker compose up -d hermes-db-mcp
 
 ```json
 {
-  "version": "0.2.15",
-  "schema_revision": "0005_wechat_retro_opt",
+  "version": "0.2.16",
+  "schema_revision": "0006_agent_self_evolution",
   "capabilities": {
     "topic_bucket": true,
     "topic_revisit_of": true,
@@ -89,7 +89,8 @@ docker compose up -d hermes-db-mcp
     "workflow_artifacts": true,
     "wechat_publication_ledger": true,
     "wechat_analytics_ingestion": true,
-    "wechat_retrospective_topic_optimizer": true
+    "wechat_retrospective_topic_optimizer": true,
+    "agent_self_evolution_foundation": true
   }
 }
 ```

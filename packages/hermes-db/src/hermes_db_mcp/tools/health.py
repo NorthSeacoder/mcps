@@ -5,6 +5,7 @@ from hermes_db_mcp.server import mcp, AppContext
 from hermes_db_mcp.config import settings
 from hermes_db_mcp.services.embedding import build_embedding_payload
 from hermes_db_mcp.services.schema import (
+    inspect_agent_self_evolution_foundation_schema,
     inspect_topic_schema,
     inspect_wechat_analytics_ingestion_schema,
     inspect_wechat_publication_ledger_schema,
@@ -59,6 +60,7 @@ async def health(ctx: Context) -> dict:
         "wechat_publication_ledger": False,
         "wechat_analytics_ingestion": False,
         "wechat_retrospective_topic_optimizer": False,
+        "agent_self_evolution_foundation": False,
     }
 
     if pg_ok:
@@ -76,6 +78,7 @@ async def health(ctx: Context) -> dict:
                 **await inspect_wechat_publication_ledger_schema(app.pool),
                 **await inspect_wechat_analytics_ingestion_schema(app.pool),
                 **await inspect_wechat_retrospective_topic_optimizer_schema(app.pool),
+                **await inspect_agent_self_evolution_foundation_schema(app.pool),
             }
         except Exception as e:
             result["schema_error"] = str(e)

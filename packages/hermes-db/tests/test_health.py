@@ -38,6 +38,7 @@ async def test_health_returns_version_and_capabilities():
         "wechat_publication_ledger": True,
         "wechat_analytics_ingestion": True,
         "wechat_retrospective_topic_optimizer": True,
+        "agent_self_evolution_foundation": True,
     }
     assert result["schema_revision"] == "0001_topic_revisit"
 
@@ -92,6 +93,7 @@ async def test_health_disables_capabilities_when_pg_is_unavailable(monkeypatch):
         "wechat_publication_ledger": False,
         "wechat_analytics_ingestion": False,
         "wechat_retrospective_topic_optimizer": False,
+        "agent_self_evolution_foundation": False,
     }
 
 
@@ -148,4 +150,14 @@ def schema_inspector(monkeypatch):
     monkeypatch.setattr(
         "hermes_db_mcp.tools.health.inspect_wechat_retrospective_topic_optimizer_schema",
         inspect_wechat_retrospective_topic_optimizer_schema,
+    )
+
+    async def inspect_agent_self_evolution_foundation_schema(pool):
+        return {
+            "agent_self_evolution_foundation": True,
+        }
+
+    monkeypatch.setattr(
+        "hermes_db_mcp.tools.health.inspect_agent_self_evolution_foundation_schema",
+        inspect_agent_self_evolution_foundation_schema,
     )

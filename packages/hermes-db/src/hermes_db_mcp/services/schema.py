@@ -543,6 +543,7 @@ async def inspect_wechat_retrospective_topic_optimizer_schema(
         "created_at",
         "updated_at",
     }
+
     report_required = {
         "report_id",
         "account",
@@ -671,5 +672,168 @@ async def inspect_wechat_retrospective_topic_optimizer_schema(
             "idx_learning_candidates_source_report",
             "idx_learning_candidates_domain",
             "idx_learning_candidates_policy_id",
+        }.issubset(indexes),
+    }
+
+
+async def inspect_agent_self_evolution_foundation_schema(
+    pool: asyncpg.Pool,
+) -> dict[str, bool]:
+    policy_columns = await _fetch_column_names(pool, "hermes", "agent_policies")
+    application_columns = await _fetch_column_names(pool, "hermes", "policy_applications")
+    candidate_columns = await _fetch_column_names(pool, "hermes", "learning_candidates")
+    policy_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "agent_policies_pkey",
+            "agent_policies_source_candidate_id_fkey",
+            "agent_policies_source_policy_version_id_fkey",
+            "uq_agent_policies_policy_version",
+            "chk_agent_policies_version_positive",
+            "chk_agent_policies_status",
+            "chk_agent_policies_policy_type",
+            "chk_agent_policies_effective_range",
+            "chk_agent_policies_scope_json_object",
+            "chk_agent_policies_task_types_json_array",
+            "chk_agent_policies_decision_points_json_array",
+            "chk_agent_policies_trigger_conditions_json_object",
+            "chk_agent_policies_policy_body_json_object",
+            "chk_agent_policies_evidence_refs_json_object",
+            "chk_agent_policies_metadata_json_object",
+        ),
+        table_name="agent_policies",
+    )
+    application_constraints = await _fetch_constraint_names(
+        pool,
+        (
+            "policy_applications_pkey",
+            "policy_applications_policy_version_id_fkey",
+            "chk_policy_applications_version_positive",
+            "chk_policy_applications_status",
+            "chk_policy_applications_scope_json_object",
+            "chk_policy_applications_matched_conditions_json_object",
+            "chk_policy_applications_applied_action_json_object",
+            "chk_policy_applications_outcome_summary_json_object",
+            "chk_policy_applications_error_summary_json_object",
+        ),
+        table_name="policy_applications",
+    )
+    indexes = await _fetch_index_names(
+        pool,
+        "hermes",
+        (
+            "uq_agent_policies_source_candidate",
+            "idx_agent_policies_active_lookup",
+            "idx_agent_policies_source_candidate",
+            "idx_agent_policies_policy_id",
+            "idx_agent_policies_scope_gin",
+            "idx_agent_policies_trigger_conditions_gin",
+            "idx_policy_applications_run",
+            "idx_policy_applications_policy",
+            "idx_policy_applications_policy_version",
+            "idx_policy_applications_domain_task",
+        ),
+    )
+
+    policy_required = {
+        "policy_version_id",
+        "policy_id",
+        "version",
+        "domain",
+        "policy_type",
+        "status",
+        "scope_json",
+        "task_types_json",
+        "decision_points_json",
+        "trigger_conditions_json",
+        "policy_body_json",
+        "priority",
+        "precedence",
+        "source_candidate_id",
+        "source_policy_version_id",
+        "evidence_refs_json",
+        "approved_by",
+        "approved_at",
+        "effective_from",
+        "effective_until",
+        "disable_reason",
+        "metadata_json",
+        "created_at",
+        "updated_at",
+    }
+    application_required = {
+        "application_id",
+        "run_id",
+        "domain",
+        "agent_name",
+        "task_type",
+        "decision_point",
+        "policy_id",
+        "policy_version_id",
+        "policy_version",
+        "scope_json",
+        "matched_conditions_json",
+        "application_status",
+        "applied_action_json",
+        "outcome_summary_json",
+        "warning",
+        "error_summary_json",
+        "created_at",
+    }
+    candidate_compat_required = {
+        "candidate_id",
+        "domain",
+        "candidate_type",
+        "scope_json",
+        "trigger_conditions_json",
+        "proposed_policy_json",
+        "evidence_refs_json",
+        "status",
+        "policy_id",
+    }
+
+    return {
+        "agent_self_evolution_foundation": policy_required.issubset(policy_columns)
+        and application_required.issubset(application_columns)
+        and candidate_compat_required.issubset(candidate_columns)
+        and {
+            "agent_policies_pkey",
+            "agent_policies_source_candidate_id_fkey",
+            "agent_policies_source_policy_version_id_fkey",
+            "uq_agent_policies_policy_version",
+            "chk_agent_policies_version_positive",
+            "chk_agent_policies_status",
+            "chk_agent_policies_policy_type",
+            "chk_agent_policies_effective_range",
+            "chk_agent_policies_scope_json_object",
+            "chk_agent_policies_task_types_json_array",
+            "chk_agent_policies_decision_points_json_array",
+            "chk_agent_policies_trigger_conditions_json_object",
+            "chk_agent_policies_policy_body_json_object",
+            "chk_agent_policies_evidence_refs_json_object",
+            "chk_agent_policies_metadata_json_object",
+        }.issubset(policy_constraints)
+        and {
+            "policy_applications_pkey",
+            "policy_applications_policy_version_id_fkey",
+            "chk_policy_applications_version_positive",
+            "chk_policy_applications_status",
+            "chk_policy_applications_scope_json_object",
+            "chk_policy_applications_matched_conditions_json_object",
+            "chk_policy_applications_applied_action_json_object",
+            "chk_policy_applications_outcome_summary_json_object",
+            "chk_policy_applications_error_summary_json_object",
+        }.issubset(application_constraints)
+        and {
+            "uq_agent_policies_source_candidate",
+            "idx_agent_policies_active_lookup",
+            "idx_agent_policies_source_candidate",
+            "idx_agent_policies_policy_id",
+            "idx_agent_policies_scope_gin",
+            "idx_agent_policies_trigger_conditions_gin",
+            "idx_policy_applications_run",
+            "idx_policy_applications_policy",
+            "idx_policy_applications_policy_version",
+            "idx_policy_applications_domain_task",
         }.issubset(indexes),
     }
